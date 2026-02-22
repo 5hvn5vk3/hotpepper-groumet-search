@@ -71,6 +71,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [range, setRange] = useState<number>(3); // デフォルトは3（1000m）
+  const [hasStoredLocation, setHasStoredLocation] = useState<boolean>(() => {
+    const savedLocation =
+      storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    return isStoredLocation(savedLocation);
+  });
 
   const requestCurrentLocation = useCallback(
     (showErrorAlert: boolean): Promise<StoredLocation | null> => {
@@ -93,6 +98,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
             setLat(nextLocation.lat);
             setLng(nextLocation.lng);
             storageService.set(LOCATION_STORAGE_KEY, nextLocation);
+            setHasStoredLocation(true);
             setValidationMessage("");
             resolve(nextLocation);
           },
@@ -195,6 +201,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     const savedLocation =
       storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
     const hasSavedLocation = isStoredLocation(savedLocation);
+    setHasStoredLocation(hasSavedLocation);
 
     if (hasSavedLocation) {
       setLat(savedLocation.lat);
@@ -227,13 +234,23 @@ export const SearchForm: React.FC<SearchFormProps> = ({
             <select
               value={range}
               onChange={(e) => setRange(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className={
+                "w-full px-3 py-2 border border-gray-300 rounded-md" +
+                (hasStoredLocation ? "" : " bg-gray-200")
+              }
+              disabled={!hasStoredLocation}
             >
-              <option value={1}>300m</option>
-              <option value={2}>500m</option>
-              <option value={3}>1000m</option>
-              <option value={4}>2000m</option>
-              <option value={5}>3000m</option>
+              {hasStoredLocation ? (
+                <>
+                  <option value={1}>300m</option>
+                  <option value={2}>500m</option>
+                  <option value={3}>1000m</option>
+                  <option value={4}>2000m</option>
+                  <option value={5}>3000m</option>
+                </>
+              ) : (
+                <option>位置情報がありません</option>
+              )}
             </select>
           </div>
         </div>
@@ -297,7 +314,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         disabled={isLoading}
         className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
       >
-        {isLoading ? "検索中..." : "検索"}
+        {isLoading
+          ? "検索中..."
+          : hasStoredLocation
+            ? "検索（距離順）"
+            : "検索（おススメ順）"}
       </button>
     </form>
   );

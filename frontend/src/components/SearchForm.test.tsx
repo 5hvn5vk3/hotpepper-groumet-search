@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import { SearchForm } from "./SearchForm";
 import * as useGenresHook from "@/hooks/useGenres";
@@ -42,7 +48,7 @@ describe("SearchForm", () => {
           return [{ type: "navigate" } as PerformanceNavigationTiming];
         }
         return [];
-      }
+      },
     );
 
     vi.spyOn(useGenresHook, "useGenres").mockReturnValue({
@@ -55,12 +61,12 @@ describe("SearchForm", () => {
   it("位置情報・住所・キーワードが全て未入力なら画面内エラーを表示して送信しない", () => {
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（おススメ順）" }));
 
     expect(
       screen.getByText(
-        "位置情報が取得できないため検索できません。住所またはキーワード検索をお試しください"
-      )
+        "位置情報が取得できないため検索できません。住所またはキーワード検索をお試しください",
+      ),
     ).toBeInTheDocument();
     expect(mockOnSearch).not.toHaveBeenCalled();
   });
@@ -71,7 +77,7 @@ describe("SearchForm", () => {
     fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
       target: { value: "梅田" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（おススメ順）" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
       address: "梅田",
@@ -89,7 +95,7 @@ describe("SearchForm", () => {
     fireEvent.change(screen.getByPlaceholderText("例: 個室"), {
       target: { value: "飲み放題" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（おススメ順）" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
       address: undefined,
@@ -127,7 +133,7 @@ describe("SearchForm", () => {
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
 
     expect(getCurrentPosition).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（距離順）" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
       address: undefined,
@@ -170,7 +176,7 @@ describe("SearchForm", () => {
         lat: 35.6895,
         lng: 139.6917,
         timestamp: 1700000000000,
-      })
+      }),
     );
   });
 
@@ -181,14 +187,14 @@ describe("SearchForm", () => {
         lat: 34.6937,
         lng: 135.5023,
         timestamp: 1700000000000,
-      })
+      }),
     );
 
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
     await act(async () => {});
 
     expect(getCurrentPosition).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（距離順）" }));
 
     await waitFor(() =>
       expect(mockOnSearch).toHaveBeenCalledWith({
@@ -198,7 +204,7 @@ describe("SearchForm", () => {
         lat: 34.6937,
         lng: 135.5023,
         range: 3,
-      })
+      }),
     );
   });
 
@@ -210,7 +216,7 @@ describe("SearchForm", () => {
           return [{ type: "reload" } as PerformanceNavigationTiming];
         }
         return [];
-      }
+      },
     );
 
     sessionStorage.setItem(
@@ -219,13 +225,13 @@ describe("SearchForm", () => {
         lat: 35.1,
         lng: 139.1,
         timestamp: 1700000000000 - (LOCATION_REFRESH_INTERVAL_MS - 1),
-      })
+      }),
     );
 
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
 
     expect(getCurrentPosition).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（距離順）" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
       address: undefined,
@@ -245,7 +251,7 @@ describe("SearchForm", () => {
           return [{ type: "reload" } as PerformanceNavigationTiming];
         }
         return [];
-      }
+      },
     );
 
     sessionStorage.setItem(
@@ -254,7 +260,7 @@ describe("SearchForm", () => {
         lat: 35.1,
         lng: 139.1,
         timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
-      })
+      }),
     );
 
     getCurrentPosition = vi.fn((success: PositionCallback) => {
@@ -287,7 +293,7 @@ describe("SearchForm", () => {
         lat: 35.6895,
         lng: 139.6917,
         timestamp: 1700000000000,
-      })
+      }),
     );
   });
 
@@ -300,7 +306,9 @@ describe("SearchForm", () => {
 
   it("検索ボタン押下時に権限がgrantedかつ保存位置が3分以上前なら位置情報を再取得してから検索する", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1700000000000);
-    permissionsQuery.mockResolvedValue({ state: "granted" } as PermissionStatus);
+    permissionsQuery.mockResolvedValue({
+      state: "granted",
+    } as PermissionStatus);
 
     sessionStorage.setItem(
       LOCATION_STORAGE_KEY,
@@ -308,7 +316,7 @@ describe("SearchForm", () => {
         lat: 35.1,
         lng: 139.1,
         timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
-      })
+      }),
     );
 
     getCurrentPosition = vi.fn((success: PositionCallback) => {
@@ -333,10 +341,10 @@ describe("SearchForm", () => {
     });
 
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（距離順）" }));
 
     await waitFor(() =>
-      expect(permissionsQuery).toHaveBeenCalledWith({ name: "geolocation" })
+      expect(permissionsQuery).toHaveBeenCalledWith({ name: "geolocation" }),
     );
     await waitFor(() =>
       expect(mockOnSearch).toHaveBeenCalledWith({
@@ -346,7 +354,7 @@ describe("SearchForm", () => {
         lat: 35.6895,
         lng: 139.6917,
         range: 3,
-      })
+      }),
     );
     expect(getCurrentPosition).toHaveBeenCalledTimes(1);
   });
@@ -361,11 +369,11 @@ describe("SearchForm", () => {
         lat: 35.1,
         lng: 139.1,
         timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
-      })
+      }),
     );
 
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（距離順）" }));
 
     await waitFor(() =>
       expect(mockOnSearch).toHaveBeenCalledWith({
@@ -375,7 +383,7 @@ describe("SearchForm", () => {
         lat: 35.1,
         lng: 139.1,
         range: 3,
-      })
+      }),
     );
     expect(getCurrentPosition).not.toHaveBeenCalled();
   });
@@ -393,11 +401,11 @@ describe("SearchForm", () => {
         lat: 35.1,
         lng: 139.1,
         timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
-      })
+      }),
     );
 
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（距離順）" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
       address: undefined,
