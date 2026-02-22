@@ -72,62 +72,123 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   const [lng, setLng] = useState<number | null>(null);
   const [range, setRange] = useState<number>(3); // デフォルトは3（1000m）
 
+  const requestCurrentLocation = useCallback(
+    (showErrorAlert: boolean): Promise<StoredLocation | null> => {
+      if (!navigator.geolocation) {
+        if (showErrorAlert) {
+          alert("Geolocation API がサポートされていません");
+        }
+        return Promise.resolve(null);
+      }
+
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const nextLocation: StoredLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              timestamp: Date.now(),
+            };
+
+            setLat(nextLocation.lat);
+            setLng(nextLocation.lng);
+            storageService.set(LOCATION_STORAGE_KEY, nextLocation);
+            setValidationMessage("");
+            resolve(nextLocation);
+          },
+          (err) => {
+            console.error(err);
+            if (showErrorAlert) {
+              alert("現在地の取得に失敗しました");
+            }
+            resolve(null);
+          },
+          { enableHighAccuracy: true },
+        );
+      });
+    },
+    [],
+  );
+
+  const executeSearch = useCallback(
+    (
+      trimmedAddress: string,
+      trimmedKeyword: string,
+      locationOverride?: StoredLocation | null,
+    ) => {
+      const effectiveLat = locationOverride?.lat ?? lat;
+      const effectiveLng = locationOverride?.lng ?? lng;
+
+      const hasLocation = effectiveLat !== null && effectiveLng !== null;
+      const hasAddress = trimmedAddress !== "";
+      const hasKeyword = trimmedKeyword !== "";
+
+      if (!hasLocation && !hasAddress && !hasKeyword) {
+        setValidationMessage(EMPTY_SEARCH_MESSAGE);
+        return;
+      }
+
+      setValidationMessage("");
+      onSearch({
+        address: hasAddress ? trimmedAddress : undefined,
+        genre: selectedGenre || undefined,
+        keyword: hasKeyword ? trimmedKeyword : undefined,
+        lat: hasLocation ? effectiveLat : undefined,
+        lng: hasLocation ? effectiveLng : undefined,
+        range: hasLocation ? range : undefined,
+      });
+    },
+    [lat, lng, onSearch, range, selectedGenre],
+  );
+
   // フォーム送信時のハンドラー関数
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedAddress = address.trim();
     const trimmedKeyword = keyword.trim();
-    const hasLocation = lat !== null && lng !== null;
-    const hasAddress = trimmedAddress !== "";
-    const hasKeyword = trimmedKeyword !== "";
+    const savedLocation =
+      storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    const locationFromStorage = isStoredLocation(savedLocation)
+      ? savedLocation
+      : null;
 
-    if (!hasLocation && !hasAddress && !hasKeyword) {
-      setValidationMessage(EMPTY_SEARCH_MESSAGE);
-      return;
-    }
-
-    setValidationMessage("");
-    onSearch({
-      address: hasAddress ? trimmedAddress : undefined,
-      genre: selectedGenre || undefined,
-      keyword: hasKeyword ? trimmedKeyword : undefined,
-      lat: hasLocation ? lat : undefined,
-      lng: hasLocation ? lng : undefined,
-      range: hasLocation ? range : undefined,
-    });
-  };
-
-  const requestCurrentLocation = useCallback((showErrorAlert: boolean) => {
     if (!navigator.geolocation) {
-      if (showErrorAlert) {
-        alert("Geolocation API がサポートされていません");
-      }
+      executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const nextLocation: StoredLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          timestamp: Date.now(),
-        };
+    const hasExpiredSavedLocation =
+      isStoredLocation(savedLocation) &&
+      Date.now() - savedLocation.timestamp >= LOCATION_REFRESH_INTERVAL_MS;
+    const supportsPermissionQuery =
+      typeof navigator.permissions?.query === "function";
 
-        setLat(nextLocation.lat);
-        setLng(nextLocation.lng);
-        storageService.set(LOCATION_STORAGE_KEY, nextLocation);
-        setValidationMessage("");
-      },
-      (err) => {
-        console.error(err);
-        if (showErrorAlert) {
-          alert("現在地の取得に失敗しました");
-        }
-      },
-      { enableHighAccuracy: true },
-    );
-  }, []);
+    if (hasExpiredSavedLocation && supportsPermissionQuery) {
+      void navigator.permissions
+        .query({ name: "geolocation" })
+        .then((permissionStatus) => {
+          if (permissionStatus.state === "granted") {
+            void requestCurrentLocation(true).then((nextLocation) => {
+              executeSearch(
+                trimmedAddress,
+                trimmedKeyword,
+                nextLocation ?? locationFromStorage,
+              );
+            });
+            return;
+          }
+          executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
+        })
+        .catch((err) => {
+          console.error(err);
+          executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
+        });
+      return;
+    }
+
+    executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
+  };
 
   // ページアクセス時に現在地取得を試行
   useEffect(() => {
@@ -146,7 +207,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         Date.now() - savedLocation.timestamp >= LOCATION_REFRESH_INTERVAL_MS);
 
     if (shouldRefreshLocation) {
-      requestCurrentLocation(false);
+      void requestCurrentLocation(false);
     }
   }, [requestCurrentLocation]);
 

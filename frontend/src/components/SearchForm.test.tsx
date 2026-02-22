@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { SearchForm } from "./SearchForm";
 import * as useGenresHook from "@/hooks/useGenres";
@@ -16,15 +16,23 @@ const LOCATION_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 describe("SearchForm", () => {
   let mockOnSearch: ReturnType<typeof vi.fn>;
   let getCurrentPosition: ReturnType<typeof vi.fn>;
+  let permissionsQuery: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     sessionStorage.clear();
     vi.restoreAllMocks();
     mockOnSearch = vi.fn() as any;
     getCurrentPosition = vi.fn();
+    permissionsQuery = vi
+      .fn()
+      .mockResolvedValue({ state: "prompt" } as PermissionStatus);
 
     Object.defineProperty(navigator, "geolocation", {
       value: { getCurrentPosition },
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "permissions", {
+      value: { query: permissionsQuery },
       configurable: true,
     });
 
@@ -166,7 +174,7 @@ describe("SearchForm", () => {
     );
   });
 
-  it("セッションストレージに保存済みの位置情報を初期表示に反映する", () => {
+  it("セッションストレージに保存済みの位置情報を初期表示に反映する", async () => {
     sessionStorage.setItem(
       LOCATION_STORAGE_KEY,
       JSON.stringify({
@@ -177,9 +185,21 @@ describe("SearchForm", () => {
     );
 
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+    await act(async () => {});
 
-    expect(screen.getByText("緯度: 34.69370, 経度: 135.50230")).toBeInTheDocument();
     expect(getCurrentPosition).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+
+    await waitFor(() =>
+      expect(mockOnSearch).toHaveBeenCalledWith({
+        address: undefined,
+        genre: undefined,
+        keyword: undefined,
+        lat: 34.6937,
+        lng: 135.5023,
+        range: 3,
+      })
+    );
   });
 
   it("リロード時かつ前回取得から3分未満なら位置情報を再取得しない", () => {
@@ -205,7 +225,16 @@ describe("SearchForm", () => {
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
 
     expect(getCurrentPosition).not.toHaveBeenCalled();
-    expect(screen.getByText("緯度: 35.10000, 経度: 139.10000")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+
+    expect(mockOnSearch).toHaveBeenCalledWith({
+      address: undefined,
+      genre: undefined,
+      keyword: undefined,
+      lat: 35.1,
+      lng: 139.1,
+      range: 3,
+    });
   });
 
   it("リロード時かつ前回取得から3分以上なら位置情報を再取得する", () => {
@@ -267,5 +296,117 @@ describe("SearchForm", () => {
 
     const searchButton = screen.getByRole("button", { name: "検索中..." });
     expect(searchButton).toBeDisabled();
+  });
+
+  it("検索ボタン押下時に権限がgrantedかつ保存位置が3分以上前なら位置情報を再取得してから検索する", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1700000000000);
+    permissionsQuery.mockResolvedValue({ state: "granted" } as PermissionStatus);
+
+    sessionStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({
+        lat: 35.1,
+        lng: 139.1,
+        timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
+      })
+    );
+
+    getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: 35.6895,
+          longitude: 139.6917,
+          accuracy: 1,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: Date.now(),
+        toJSON: () => ({}),
+      } as GeolocationPosition);
+    });
+    Object.defineProperty(navigator, "geolocation", {
+      value: { getCurrentPosition },
+      configurable: true,
+    });
+
+    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+
+    await waitFor(() =>
+      expect(permissionsQuery).toHaveBeenCalledWith({ name: "geolocation" })
+    );
+    await waitFor(() =>
+      expect(mockOnSearch).toHaveBeenCalledWith({
+        address: undefined,
+        genre: undefined,
+        keyword: undefined,
+        lat: 35.6895,
+        lng: 139.6917,
+        range: 3,
+      })
+    );
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+  });
+
+  it("検索ボタン押下時に権限がgranted以外なら位置情報を再取得せず検索する", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1700000000000);
+    permissionsQuery.mockResolvedValue({ state: "prompt" } as PermissionStatus);
+
+    sessionStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({
+        lat: 35.1,
+        lng: 139.1,
+        timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
+      })
+    );
+
+    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+
+    await waitFor(() =>
+      expect(mockOnSearch).toHaveBeenCalledWith({
+        address: undefined,
+        genre: undefined,
+        keyword: undefined,
+        lat: 35.1,
+        lng: 139.1,
+        range: 3,
+      })
+    );
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it("検索ボタン押下時にPermissions APIが未対応なら位置情報を再取得せず検索する", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1700000000000);
+    Object.defineProperty(navigator, "permissions", {
+      value: undefined,
+      configurable: true,
+    });
+
+    sessionStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({
+        lat: 35.1,
+        lng: 139.1,
+        timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
+      })
+    );
+
+    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+
+    expect(mockOnSearch).toHaveBeenCalledWith({
+      address: undefined,
+      genre: undefined,
+      keyword: undefined,
+      lat: 35.1,
+      lng: 139.1,
+      range: 3,
+    });
+    expect(getCurrentPosition).not.toHaveBeenCalled();
   });
 });
