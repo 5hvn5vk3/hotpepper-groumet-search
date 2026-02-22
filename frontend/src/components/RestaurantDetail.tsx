@@ -14,6 +14,11 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
   restaurant,
   onClose,
 }) => {
+  const mapQuery = encodeURIComponent(
+    `${restaurant.name} ${restaurant.address}`,
+  );
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+
   return (
     // モーダルのオーバーレイ（背景）
     // fixed inset-0: 画面全体を覆う固定配置
@@ -95,12 +100,24 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
 
             {/* 外部リンクボタン */}
             <div className="pt-4">
+              {/* a要素: Googleマップの詳細ページへのリンク */}
+              <a
+                href={googleMapsUrl} // Googleマップの詳細ページURL
+                target="_blank" // 新しいタブで開く
+                rel="noopener noreferrer" // セキュリティ対策（target="_blank"使用時の推奨設定）
+                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Googleマップで場所を見る
+              </a>
+            </div>
+
+            <div className="pt-4">
               {/* a要素: ホットペッパーの詳細ページへのリンク */}
               <a
                 href={restaurant.urls.pc} // レストランの詳細ページURL
                 target="_blank" // 新しいタブで開く
                 rel="noopener noreferrer" // セキュリティ対策（target="_blank"使用時の推奨設定）
-                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
+                className="inline-block bg-red-600 text-white px-6 py-3 rounded-md hover:bg-red-700 transition-colors"
               >
                 ホットペッパーで詳細を見る
               </a>
