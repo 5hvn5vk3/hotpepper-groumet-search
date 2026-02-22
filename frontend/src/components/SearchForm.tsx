@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import type { GourmetSearchParams } from "@/types";
 // ジャンルデータを取得するカスタムフックをインポート
 import { useGenres } from "@/hooks/useGenres";
+import { SearchTextField } from "./SearchTextField";
 
 // SearchFormコンポーネントのProps（プロパティ）の型定義
 interface SearchFormProps {
@@ -140,23 +141,17 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            住所（部分一致）
-          </label>
-          <input
-            type="text"
-            value={address}
-            onChange={(e) => {
-              setAddress(e.target.value);
-              if (validationMessage) {
-                setValidationMessage("");
-              }
-            }}
-            placeholder="例: 新宿"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <SearchTextField
+          label="住所（部分一致）"
+          placeholder="例: 新宿"
+          value={address}
+          onChange={(value) => {
+            setAddress(value);
+            if (validationMessage) {
+              setValidationMessage("");
+            }
+          }}
+        />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -177,23 +172,17 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            キーワード
-          </label>
-          <input
-            type="text"
-            value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
-              if (validationMessage) {
-                setValidationMessage("");
-              }
-            }}
-            placeholder="例: 個室"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <SearchTextField
+          label="キーワード"
+          placeholder="例: 個室"
+          value={keyword}
+          onChange={(value) => {
+            setKeyword(value);
+            if (validationMessage) {
+              setValidationMessage("");
+            }
+          }}
+        />
       </div>
 
       {validationMessage && (
