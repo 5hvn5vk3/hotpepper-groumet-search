@@ -37,20 +37,30 @@ func NewHotpepperService(apiKey string) *HotpepperService {
 // params: 検索パラメータ
 // 戻り値: 型付きのレスポンスとエラー
 func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*types.GourmetSearchResponse, error) {
-	// 必須パラメータのバリデーション
-	if params.ServiceArea == "" {
-		return nil, fmt.Errorf("service_area is required")
-	}
-
 	// url.Values{}でクエリパラメータを管理するマップを作成
 	// マップはキーと値のペアを格納するデータ構造
 	queryParams := url.Values{}
 
-	// 必須パラメータの設定
-	queryParams.Set("key", s.apiKey)                    // APIキー
-	queryParams.Set("type", "lite")                     // レスポンスタイプ（軽量版）
-	queryParams.Set("format", "json")                   // レスポンス形式（JSON）
-	queryParams.Set("service_area", params.ServiceArea) // 都道府県コード
+	// 共通パラメータの設定
+	queryParams.Set("key", s.apiKey) // APIキー
+	queryParams.Set("type", "lite")  // レスポンスタイプ（軽量版）
+	queryParams.Set("format", "json")
+
+	// 緯度経度による検索が指定されていればlat/lng/rangeを使用する
+	if params.Lat != 0 && params.Lng != 0 {
+		queryParams.Set("lat", strconv.FormatFloat(params.Lat, 'f', -1, 64))
+		queryParams.Set("lng", strconv.FormatFloat(params.Lng, 'f', -1, 64))
+		if params.Range > 0 {
+			// Hotpepper APIのrangeは1-5の整数
+			queryParams.Set("range", strconv.Itoa(params.Range))
+		}
+	} else {
+		// それ以外は都道府県単位の検索を行う（service_areaは必須）
+		if params.ServiceArea == "" {
+			return nil, fmt.Errorf("either service_area or lat/lng must be provided")
+		}
+		queryParams.Set("service_area", params.ServiceArea)
+	}
 
 	// オプションパラメータの設定（値が空でない場合のみ追加）
 	if params.Address != "" {

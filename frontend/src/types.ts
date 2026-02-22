@@ -13,6 +13,8 @@ export interface Shop {
   urls: {
     pc: string;
   };
+  // 営業時間
+  open?: string;
   photo: {
     pc: {
       l: string;
@@ -48,10 +50,18 @@ export interface GenreMasterResponse {
 }
 
 export interface GourmetSearchParams {
-  serviceArea: string;
+  serviceArea?: string;
   address?: string;
   genre?: string;
   keyword?: string;
   page?: number;
   count?: number;
+  // 緯度経度で検索する場合
+  lat?: number;
+  lng?: number;
+  // Hotpepper APIのrange（1〜5）
+  range?: number;
 }
+
+// 互換性のためのエイリアス：既存コードがSearchParamsを参照している場合に対応
+export type SearchParams = GourmetSearchParams;

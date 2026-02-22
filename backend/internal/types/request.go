@@ -15,4 +15,10 @@ type GourmetSearchParams struct {
 	Start int
 	// ページング：取得件数（1〜100の範囲、デフォルト20）
 	Count int
+	// 緯度（lat/lng検索を行う場合に使用）
+	Lat float64
+	// 経度（lat/lng検索を行う場合に使用）
+	Lng float64
+	// 検索範囲（Hotpepper APIのrangeパラメータ、1-5で指定）
+	Range int
 }

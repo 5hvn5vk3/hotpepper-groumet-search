@@ -88,14 +88,25 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 	// 例：/api/gourmet?service_area=SA11&keyword=居酒屋
 	query := r.URL.Query()
 
-	// 必須パラメータ（service_area）のチェック
-	// Get()メソッドで指定されたキーの値を取得（存在しない場合は空文字列）
+	// パラメータ取得：service_area または lat/lng のいずれかで検索できるようにする
 	serviceArea := query.Get("service_area")
-	// service_areaが空の場合、エラーを返す
-	if serviceArea == "" {
-		// GourmetSearchParams{}は空の構造体を返す
-		// &ValidationError{...}はValidationErrorのポインタを返す
-		return types.GourmetSearchParams{}, &ValidationError{Message: "service_area is required"}
+	latStr := query.Get("lat")
+	lngStr := query.Get("lng")
+	rangeStr := query.Get("range")
+
+	var lat, lng float64
+	var rng int
+	// lat/lngが指定されていればパースを試みる
+	if latStr != "" && lngStr != "" {
+		if v, err := strconv.ParseFloat(latStr, 64); err == nil {
+			lat = v
+		}
+		if v, err := strconv.ParseFloat(lngStr, 64); err == nil {
+			lng = v
+		}
+	}
+	if rangeStr != "" {
+		rng = parseIntOrDefault(rangeStr, 0)
 	}
 
 	// オプショナルなパラメータの解析
@@ -103,15 +114,22 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 	start := parseIntOrDefault(query.Get("start"), 1)  // 開始位置（デフォルト：1）
 	count := parseIntOrDefault(query.Get("count"), 20) // 取得件数（デフォルト：20）
 
+	// 少なくともservice_areaかlat/lngのいずれかが必要
+	if serviceArea == "" && (lat == 0 || lng == 0) {
+		return types.GourmetSearchParams{}, &ValidationError{Message: "either service_area or lat/lng must be provided"}
+	}
+
 	// GourmetSearchParams構造体を作成して返す
-	// 構造体リテラルを使用してフィールドに値を設定
 	return types.GourmetSearchParams{
-		ServiceArea: serviceArea,          // 必須：都道府県コード
+		ServiceArea: serviceArea,          // 必須（lat/lng指定時は不要）
 		Address:     query.Get("address"), // オプション：住所
 		Genre:       query.Get("genre"),   // オプション：ジャンルコード
 		Keyword:     query.Get("keyword"), // オプション：キーワード
 		Start:       start,                // ページング：開始位置
 		Count:       count,                // ページング：取得件数
+		Lat:         lat,
+		Lng:         lng,
+		Range:       rng,
 	}, nil // nilはエラーなしを意味する
 }
 

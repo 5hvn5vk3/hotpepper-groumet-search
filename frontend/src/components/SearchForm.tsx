@@ -41,21 +41,53 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     // e.preventDefault()でフォームのデフォルト動作（ページリロード）を防ぐ
     e.preventDefault();
 
-    // 必須項目（都道府県）のバリデーション
-    if (!serviceArea) {
-      // alertでエラーメッセージを表示
-      alert("都道府県を選択してください");
-      return; // 処理を中断
+    // 必須項目のバリデーション: 都道府県または緯度経度のいずれかを指定する
+    if (!serviceArea && (lat === null || lng === null)) {
+      alert(
+        "都道府県か現在地のいずれかを指定してください（現在地ボタンで取得できます）",
+      );
+      return;
     }
 
     // onSearch関数を呼び出して検索を実行
     // 値が空の場合はundefinedを設定（||演算子でフォールバック）
     onSearch({
-      serviceArea, // 必須：都道府県コード
+      serviceArea: serviceArea || undefined, // 都道府県コード（未指定可）
       address: address || undefined, // オプション：住所
       genre: selectedGenre || undefined, // オプション：ジャンル
       keyword: keyword || undefined, // オプション：キーワード
+      lat: lat ?? undefined,
+      lng: lng ?? undefined,
+      range: range ?? undefined,
     });
+  };
+
+  // 現在地（Geolocation API）関連の状態
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [range, setRange] = useState<number>(3); // デフォルトは3（約1000m）
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation API がサポートされていません");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLat(position.coords.latitude);
+        setLng(position.coords.longitude);
+      },
+      (err) => {
+        console.error(err);
+        alert("現在地の取得に失敗しました");
+      },
+      { enableHighAccuracy: true },
+    );
+  };
+
+  const clearLocation = () => {
+    setLat(null);
+    setLng(null);
   };
 
   // JSXを返す：フォームのHTML構造
@@ -102,6 +134,52 @@ export const SearchForm: React.FC<SearchFormProps> = ({
               </optgroup>
             ))}
           </select>
+        </div>
+
+        {/* 現在地取得と検索範囲 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            現在地で検索
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              className="px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
+            >
+              現在地を取得
+            </button>
+            <button
+              type="button"
+              onClick={clearLocation}
+              className="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              クリア
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            {lat && lng ? (
+              <span>
+                緯度: {lat.toFixed(5)}, 経度: {lng.toFixed(5)}
+              </span>
+            ) : (
+              <span>現在地未取得</span>
+            )}
+          </div>
+          <div className="mt-2">
+            <label className="block text-sm text-gray-700 mb-1">検索範囲</label>
+            <select
+              value={range}
+              onChange={(e) => setRange(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value={1}>1: 約300m</option>
+              <option value={2}>2: 約500m</option>
+              <option value={3}>3: 約1000m</option>
+              <option value={4}>4: 約2000m</option>
+              <option value={5}>5: 約3000m</option>
+            </select>
+          </div>
         </div>
 
         {/* 住所入力フィールド */}

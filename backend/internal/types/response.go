@@ -31,6 +31,8 @@ type Shop struct {
 	Lat float64 `json:"lat"`
 	// 経度
 	Lng float64 `json:"lng"`
+	// 営業時間（APIからのフィールド名に合わせる）
+	Open string `json:"open"`
 	// ジャンル情報
 	Genre ShopGenre `json:"genre"`
 	// キャッチコピー

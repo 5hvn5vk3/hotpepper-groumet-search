@@ -79,6 +79,14 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
               <p className="text-gray-600">{restaurant.address}</p>
             </div>
 
+            {/* 営業時間 */}
+            {restaurant.open && (
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-1">営業時間</h4>
+                <p className="text-gray-600">{restaurant.open}</p>
+              </div>
+            )}
+
             {/* アクセス情報セクション */}
             <div>
               <h4 className="font-semibold text-gray-700 mb-1">アクセス</h4>
