@@ -125,13 +125,14 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           alert("現在地の取得に失敗しました");
         }
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true },
     );
   }, []);
 
   // ページアクセス時に現在地取得を試行
   useEffect(() => {
-    const savedLocation = storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    const savedLocation =
+      storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
     const hasSavedLocation = isStoredLocation(savedLocation);
 
     if (hasSavedLocation) {
@@ -149,16 +150,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     }
   }, [requestCurrentLocation]);
 
-  const handleUseCurrentLocation = () => {
-    requestCurrentLocation(true);
-  };
-
-  const clearLocation = () => {
-    setLat(null);
-    setLng(null);
-    storageService.remove(LOCATION_STORAGE_KEY);
-  };
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -168,36 +159,10 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            現在地で検索
-          </label>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleUseCurrentLocation}
-              className="px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-            >
-              現在地を取得
-            </button>
-            <button
-              type="button"
-              onClick={clearLocation}
-              className="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              クリア
-            </button>
-          </div>
-          <div className="text-xs text-gray-500 mt-2">
-            {lat !== null && lng !== null ? (
-              <span>
-                緯度: {lat.toFixed(5)}, 経度: {lng.toFixed(5)}
-              </span>
-            ) : (
-              <span>現在地未取得</span>
-            )}
-          </div>
           <div className="mt-2">
-            <label className="block text-sm text-gray-700 mb-1">検索範囲</label>
+            <label className="block text-sm text-gray-700 mb-1">
+              検索範囲 （現在地から）
+            </label>
             <select
               value={range}
               onChange={(e) => setRange(Number(e.target.value))}
@@ -257,7 +222,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       </div>
 
       {validationMessage && (
-        <p className="mb-4 text-sm text-red-600" role="alert" aria-live="polite">
+        <p
+          className="mb-4 text-sm text-red-600"
+          role="alert"
+          aria-live="polite"
+        >
           {validationMessage}
         </p>
       )}
