@@ -10,12 +10,33 @@ const mockGenres = [
   { code: "G001", name: "居酒屋" },
   { code: "G002", name: "イタリアン" },
 ];
+const LOCATION_STORAGE_KEY = "searchCurrentLocation";
+const LOCATION_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
 describe("SearchForm", () => {
   let mockOnSearch: ReturnType<typeof vi.fn>;
+  let getCurrentPosition: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    sessionStorage.clear();
+    vi.restoreAllMocks();
     mockOnSearch = vi.fn() as any;
+    getCurrentPosition = vi.fn();
+
+    Object.defineProperty(navigator, "geolocation", {
+      value: { getCurrentPosition },
+      configurable: true,
+    });
+
+    vi.spyOn(window.performance, "getEntriesByType").mockImplementation(
+      (entryType: string) => {
+        if (entryType === "navigation") {
+          return [{ type: "navigate" } as PerformanceNavigationTiming];
+        }
+        return [];
+      }
+    );
+
     vi.spyOn(useGenresHook, "useGenres").mockReturnValue({
       genres: mockGenres,
       isLoading: false,
@@ -72,8 +93,8 @@ describe("SearchForm", () => {
     });
   });
 
-  it("位置情報だけでも検索できる", () => {
-    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+  it("ページアクセス時の位置情報取得だけでも検索できる", () => {
+    getCurrentPosition = vi.fn((success: PositionCallback) => {
       success({
         coords: {
           latitude: 35.6895,
@@ -97,7 +118,7 @@ describe("SearchForm", () => {
 
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "現在地を取得" }));
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "検索" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
@@ -108,6 +129,137 @@ describe("SearchForm", () => {
       lng: 139.6917,
       range: 3,
     });
+  });
+
+  it("位置情報取得時にタイムスタンプ付きでセッションストレージへ保存する", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1700000000000);
+    getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: 35.6895,
+          longitude: 139.6917,
+          accuracy: 1,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: Date.now(),
+        toJSON: () => ({}),
+      } as GeolocationPosition);
+    });
+
+    Object.defineProperty(navigator, "geolocation", {
+      value: { getCurrentPosition },
+      configurable: true,
+    });
+
+    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+
+    expect(sessionStorage.getItem(LOCATION_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        lat: 35.6895,
+        lng: 139.6917,
+        timestamp: 1700000000000,
+      })
+    );
+  });
+
+  it("セッションストレージに保存済みの位置情報を初期表示に反映する", () => {
+    sessionStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({
+        lat: 34.6937,
+        lng: 135.5023,
+        timestamp: 1700000000000,
+      })
+    );
+
+    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+
+    expect(screen.getByText("緯度: 34.69370, 経度: 135.50230")).toBeInTheDocument();
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it("リロード時かつ前回取得から3分未満なら位置情報を再取得しない", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1700000000000);
+    vi.spyOn(window.performance, "getEntriesByType").mockImplementation(
+      (entryType: string) => {
+        if (entryType === "navigation") {
+          return [{ type: "reload" } as PerformanceNavigationTiming];
+        }
+        return [];
+      }
+    );
+
+    sessionStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({
+        lat: 35.1,
+        lng: 139.1,
+        timestamp: 1700000000000 - (LOCATION_REFRESH_INTERVAL_MS - 1),
+      })
+    );
+
+    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(screen.getByText("緯度: 35.10000, 経度: 139.10000")).toBeInTheDocument();
+  });
+
+  it("リロード時かつ前回取得から3分以上なら位置情報を再取得する", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1700000000000);
+    vi.spyOn(window.performance, "getEntriesByType").mockImplementation(
+      (entryType: string) => {
+        if (entryType === "navigation") {
+          return [{ type: "reload" } as PerformanceNavigationTiming];
+        }
+        return [];
+      }
+    );
+
+    sessionStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({
+        lat: 35.1,
+        lng: 139.1,
+        timestamp: 1700000000000 - LOCATION_REFRESH_INTERVAL_MS,
+      })
+    );
+
+    getCurrentPosition = vi.fn((success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: 35.6895,
+          longitude: 139.6917,
+          accuracy: 1,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+          toJSON: () => ({}),
+        },
+        timestamp: Date.now(),
+        toJSON: () => ({}),
+      } as GeolocationPosition);
+    });
+
+    Object.defineProperty(navigator, "geolocation", {
+      value: { getCurrentPosition },
+      configurable: true,
+    });
+
+    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(LOCATION_STORAGE_KEY)).toBe(
+      JSON.stringify({
+        lat: 35.6895,
+        lng: 139.6917,
+        timestamp: 1700000000000,
+      })
+    );
   });
 
   it("ローディング中は検索ボタンが無効化される", () => {

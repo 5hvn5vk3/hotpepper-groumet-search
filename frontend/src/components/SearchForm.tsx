@@ -1,9 +1,10 @@
-// ReactライブラリとuseStateフックをインポート
-import React, { useState } from "react";
+// Reactライブラリと主要フックをインポート
+import React, { useCallback, useEffect, useState } from "react";
 // 型定義をインポート
 import type { GourmetSearchParams } from "@/types";
 // ジャンルデータを取得するカスタムフックをインポート
 import { useGenres } from "@/hooks/useGenres";
+import { storageService } from "@/services/storageService";
 import { SearchTextField } from "./SearchTextField";
 
 // SearchFormコンポーネントのProps（プロパティ）の型定義
@@ -14,6 +15,40 @@ interface SearchFormProps {
 
 const EMPTY_SEARCH_MESSAGE =
   "位置情報が取得できないため検索できません。住所またはキーワード検索をお試しください";
+const LOCATION_STORAGE_KEY = "searchCurrentLocation";
+const LOCATION_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
+
+interface StoredLocation {
+  lat: number;
+  lng: number;
+  timestamp: number;
+}
+
+const isStoredLocation = (value: unknown): value is StoredLocation => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<StoredLocation>;
+  return (
+    Number.isFinite(candidate.lat) &&
+    Number.isFinite(candidate.lng) &&
+    Number.isFinite(candidate.timestamp)
+  );
+};
+
+const isReloadNavigation = (): boolean => {
+  if (typeof performance === "undefined") {
+    return false;
+  }
+
+  const navigationEntries = performance.getEntriesByType("navigation");
+  const firstNavigationEntry = navigationEntries[0] as
+    | PerformanceNavigationTiming
+    | undefined;
+
+  return firstNavigationEntry?.type === "reload";
+};
 
 // SearchFormコンポーネント：レストラン検索フォームを表示
 export const SearchForm: React.FC<SearchFormProps> = ({
@@ -63,29 +98,65 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     });
   };
 
-  const handleUseCurrentLocation = () => {
+  const requestCurrentLocation = useCallback((showErrorAlert: boolean) => {
     if (!navigator.geolocation) {
-      alert("Geolocation API がサポートされていません");
+      if (showErrorAlert) {
+        alert("Geolocation API がサポートされていません");
+      }
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLat(position.coords.latitude);
-        setLng(position.coords.longitude);
+        const nextLocation: StoredLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          timestamp: Date.now(),
+        };
+
+        setLat(nextLocation.lat);
+        setLng(nextLocation.lng);
+        storageService.set(LOCATION_STORAGE_KEY, nextLocation);
         setValidationMessage("");
       },
       (err) => {
         console.error(err);
-        alert("現在地の取得に失敗しました");
+        if (showErrorAlert) {
+          alert("現在地の取得に失敗しました");
+        }
       },
       { enableHighAccuracy: true }
     );
+  }, []);
+
+  // ページアクセス時に現在地取得を試行
+  useEffect(() => {
+    const savedLocation = storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    const hasSavedLocation = isStoredLocation(savedLocation);
+
+    if (hasSavedLocation) {
+      setLat(savedLocation.lat);
+      setLng(savedLocation.lng);
+    }
+
+    const shouldRefreshLocation =
+      !hasSavedLocation ||
+      (isReloadNavigation() &&
+        Date.now() - savedLocation.timestamp >= LOCATION_REFRESH_INTERVAL_MS);
+
+    if (shouldRefreshLocation) {
+      requestCurrentLocation(false);
+    }
+  }, [requestCurrentLocation]);
+
+  const handleUseCurrentLocation = () => {
+    requestCurrentLocation(true);
   };
 
   const clearLocation = () => {
     setLat(null);
     setLng(null);
+    storageService.remove(LOCATION_STORAGE_KEY);
   };
 
   return (

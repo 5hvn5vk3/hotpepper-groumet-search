@@ -37,6 +37,15 @@ class StorageService {
       console.error(`Failed to set item in storage: ${key}`, error);
     }
   }
+
+  // removeメソッド：sessionStorageからデータを削除
+  remove(key: string): void {
+    try {
+      sessionStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Failed to remove item from storage: ${key}`, error);
+    }
+  }
 }
 
 // StorageServiceのインスタンスを作成してエクスポート

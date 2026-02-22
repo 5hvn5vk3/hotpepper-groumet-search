@@ -107,4 +107,17 @@ describe("StorageService", () => {
       expect(stored).toBe(JSON.stringify(testData));
     });
   });
+
+  // ===================================================================
+  // removeメソッドのテスト: データ削除機能の検証
+  // ===================================================================
+  describe("remove", () => {
+    it("指定したキーのデータを削除できる", () => {
+      sessionStorage.setItem("testKey", JSON.stringify({ value: 1 }));
+
+      storageService.remove("testKey");
+
+      expect(sessionStorage.getItem("testKey")).toBeNull();
+    });
+  });
 });
