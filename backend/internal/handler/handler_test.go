@@ -131,7 +131,7 @@ func TestGourmetHandlerHandle(t *testing.T) {
 		{
 			name:           "必須パラメータのみの正常なGETリクエスト",
 			method:         http.MethodGet,
-			queryString:    "service_area=SA11",
+			queryString:    "keyword=居酒屋",
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			point:          "Point 1: 最小構成",
@@ -140,7 +140,7 @@ func TestGourmetHandlerHandle(t *testing.T) {
 		{
 			name:           "オプションパラメータを含むGETリクエスト",
 			method:         http.MethodGet,
-			queryString:    "service_area=SA11&address=さいたま&genre=G001&keyword=居酒屋",
+			queryString:    "address=さいたま&genre=G001&keyword=居酒屋",
 			expectedStatus: http.StatusOK,
 			expectError:    false,
 			point:          "Point 2: 全パラメータ",
@@ -149,7 +149,7 @@ func TestGourmetHandlerHandle(t *testing.T) {
 		{
 			name:           "POSTメソッドの場合、405エラー",
 			method:         http.MethodPost,
-			queryString:    "service_area=SA11",
+			queryString:    "keyword=居酒屋",
 			expectedStatus: http.StatusMethodNotAllowed,
 			expectError:    true,
 			point:          "Point 3: 不正メソッド",
@@ -258,21 +258,21 @@ func TestGourmetHandlerParseParams(t *testing.T) {
 		// Triangulation Point 1: 必須パラメータのみ
 		{
 			name:        "必須パラメータのみの場合",
-			queryString: "service_area=SA11",
+			queryString: "keyword=居酒屋",
 			expectError: false,
 			point:       "Point 1: 最小構成",
 		},
 		// Triangulation Point 2: 全パラメータ指定
 		{
 			name:        "全パラメータを指定した場合",
-			queryString: "service_area=SA11&address=さいたま&genre=G001&keyword=居酒屋&start=11&count=10",
+			queryString: "lat=35.68&lng=139.76&range=3&address=さいたま&genre=G001&keyword=居酒屋&start=11&count=10",
 			expectError: false,
 			point:       "Point 2: 全パラメータ",
 		},
 		// Triangulation Point 3: 必須パラメータなし（エラー）
 		{
 			name:        "必須パラメータがない場合、エラー",
-			queryString: "address=さいたま",
+			queryString: "genre=G001",
 			expectError: true,
 			point:       "Point 3: バリデーションエラー",
 		},

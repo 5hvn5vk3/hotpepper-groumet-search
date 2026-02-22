@@ -125,7 +125,7 @@ describe("useRestaurantSearch", () => {
       const { result } = renderHook(() => useRestaurantSearch(20));
 
       // Act（実行）: 検索を実行（必須パラメータのみ）
-      await result.current.search({ serviceArea: "SS10" });
+      await result.current.search({ keyword: "居酒屋" });
 
       // Assert（検証）: waitForで非同期の状態更新を待つ
       // Reactの状態更新は非同期なので、waitForで完了を待つ必要がある
@@ -149,7 +149,6 @@ describe("useRestaurantSearch", () => {
 
       // Act（実行）: すべてのパラメータを含めて検索
       await result.current.search({
-        serviceArea: "SS10",
         address: "新宿",
         genre: "G001",
         keyword: "居酒屋",
@@ -159,7 +158,6 @@ describe("useRestaurantSearch", () => {
       await waitFor(() => {
         expect(searchRestaurants).toHaveBeenCalledWith(
           expect.objectContaining({
-            serviceArea: "SS10",
             address: "新宿",
             genre: "G001",
             keyword: "居酒屋",
@@ -182,7 +180,7 @@ describe("useRestaurantSearch", () => {
       const { result } = renderHook(() => useRestaurantSearch(20));
 
       // Arrange（準備）: まず検索を実行してパラメータを設定
-      await result.current.search({ serviceArea: "SS10" });
+      await result.current.search({ keyword: "居酒屋" });
       await waitFor(() => expect(result.current.hasSearched).toBe(true));
 
       // Act（実行）: 2ページ目に遷移
@@ -207,7 +205,7 @@ describe("useRestaurantSearch", () => {
       const { result } = renderHook(() => useRestaurantSearch(20));
 
       // Arrange（準備）: 検索実行
-      await result.current.search({ serviceArea: "SS10" });
+      await result.current.search({ keyword: "居酒屋" });
       await waitFor(() => expect(result.current.hasSearched).toBe(true));
 
       // Act（実行）: 3ページ目に遷移
@@ -226,7 +224,7 @@ describe("useRestaurantSearch", () => {
       const { result } = renderHook(() => useRestaurantSearch(20));
 
       // Arrange（準備）: 検索実行（1ページ目）
-      await result.current.search({ serviceArea: "SS10" });
+      await result.current.search({ keyword: "居酒屋" });
       await waitFor(() => expect(result.current.hasSearched).toBe(true));
 
       // モック関数の履歴をクリア（これ以降の呼び出しだけを記録）
@@ -258,7 +256,7 @@ describe("useRestaurantSearch", () => {
       );
 
       // Act（実行）: エラーが発生する検索を実行
-      await result.current.search({ serviceArea: "SS10" });
+      await result.current.search({ keyword: "居酒屋" });
 
       // Assert（検証）
       await waitFor(() => {
@@ -280,7 +278,7 @@ describe("useRestaurantSearch", () => {
       vi.mocked(searchRestaurants).mockRejectedValue("Unknown error");
 
       // Act（実行）
-      await result.current.search({ serviceArea: "SS10" });
+      await result.current.search({ keyword: "居酒屋" });
 
       // Assert（検証）
       await waitFor(() => {
@@ -301,7 +299,7 @@ describe("useRestaurantSearch", () => {
         new Error("Network error")
       );
 
-      await result.current.search({ serviceArea: "SS10" });
+      await result.current.search({ keyword: "居酒屋" });
 
       // エラーが設定されるまで待つ
       await waitFor(() => expect(result.current.error).toBeTruthy());

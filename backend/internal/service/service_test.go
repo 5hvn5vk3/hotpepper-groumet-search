@@ -132,51 +132,62 @@ func TestSearchGourmet(t *testing.T) {
 		expectError   bool                      // エラーが発生することを期待するか
 		point         string                    // Triangulationポイント
 	}{
-		// Triangulation Point 1: 必須パラメータが含まれていない場合
+		// Triangulation Point 1: キーワードのみ
 		{
-			name: "必須パラメータ(ServiceArea)が空の場合エラー",
+			name: "キーワードのみで検索",
 			params: types.GourmetSearchParams{
-				ServiceArea: "", // 必須パラメータが空
-				Start:       1,
-				Count:       20,
-			},
-			mockResponse:  `{"results": {"shop": []}}`,
-			expectedInURL: []string{},
-			expectError:   true,
-			point:         "Point 1: 必須パラメータ欠如",
-		},
-		// Triangulation Point 2: 必須パラメータのみ
-		{
-			name: "必須パラメータのみで検索",
-			params: types.GourmetSearchParams{
-				ServiceArea: "SA11",
-				Start:       1,
-				Count:       20,
+				Keyword: "居酒屋",
+				Start:   1,
+				Count:   20,
 			},
 			mockResponse: `{"results": {"shop": []}}`,
 			expectedInURL: []string{
-				"service_area=SA11",
+				"keyword=%E5%B1%85%E9%85%92%E5%B1%8B",
 				"start=1",
 				"count=20",
 			},
 			expectError: false,
 			point:       "Point 2: 最小構成",
 		},
+		// Triangulation Point 2: 位置情報のみ
+		{
+			name: "位置情報のみで検索",
+			params: types.GourmetSearchParams{
+				Lat:   35.68,
+				Lng:   139.76,
+				Range: 3,
+				Start: 1,
+				Count: 20,
+			},
+			mockResponse: `{"results": {"shop": []}}`,
+			expectedInURL: []string{
+				"lat=35.68",
+				"lng=139.76",
+				"range=3",
+				"start=1",
+				"count=20",
+			},
+			expectError: false,
+			point:       "Point 2: 位置情報構成",
+		},
 		// Triangulation Point 3: 全パラメータ
 		{
 			name: "全パラメータを含む検索",
 			params: types.GourmetSearchParams{
-				ServiceArea: "SA11",
-				Address:     "さいたま",
-				Genre:       "G001",
-				Keyword:     "居酒屋",
-				Start:       11,
-				Count:       10,
+				Address: "さいたま",
+				Genre:   "G001",
+				Keyword: "居酒屋",
+				Lat:     35.68,
+				Lng:     139.76,
+				Range:   3,
+				Start:   11,
+				Count:   10,
 			},
 			mockResponse: `{"results": {"shop": []}}`,
 			expectedInURL: []string{
-				"service_area=SA11",
 				"genre=G001",
+				"lat=35.68",
+				"lng=139.76",
 				"start=11",
 				"count=10",
 			},
@@ -486,9 +497,9 @@ func TestSearchGourmetPagination(t *testing.T) {
 			// ========================================
 			// 不正な値（0以下、100超）を含むパラメータを渡す
 			searchParams := types.GourmetSearchParams{
-				ServiceArea: "SA11",
-				Start:       tt.start, // 例：0（不正） → 1に補正されるはず
-				Count:       tt.count, // 例：150（不正） → 100に補正されるはず
+				Keyword: "居酒屋",
+				Start:   tt.start, // 例：0（不正） → 1に補正されるはず
+				Count:   tt.count, // 例：150（不正） → 100に補正されるはず
 			}
 
 			// メソッドを実行（内部でclampInt()により値が補正される）

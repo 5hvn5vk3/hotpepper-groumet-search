@@ -54,12 +54,6 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 			// Hotpepper APIのrangeは1-5の整数
 			queryParams.Set("range", strconv.Itoa(params.Range))
 		}
-	} else {
-		// それ以外は都道府県単位の検索を行う（service_areaは必須）
-		if params.ServiceArea == "" {
-			return nil, fmt.Errorf("either service_area or lat/lng must be provided")
-		}
-		queryParams.Set("service_area", params.ServiceArea)
 	}
 
 	// オプションパラメータの設定（値が空でない場合のみ追加）
@@ -83,7 +77,7 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 
 	// fmt.Sprintf()で文字列をフォーマット（変数を埋め込んで文字列を作成）
 	// queryParams.Encode()でクエリパラメータをURLエンコード
-	// 例: "key=xxx&format=json&service_area=SA11"
+	// 例: "key=xxx&format=json&keyword=%E5%B1%85%E9%85%92%E5%B1%8B"
 	apiURL := fmt.Sprintf("%s/gourmet/v1/?%s", s.baseURL, queryParams.Encode())
 
 	// 共通のAPI呼び出しメソッドを使用してリクエストを実行

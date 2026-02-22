@@ -50,7 +50,6 @@ export interface GenreMasterResponse {
 }
 
 export interface GourmetSearchParams {
-  serviceArea?: string;
   address?: string;
   genre?: string;
   keyword?: string;

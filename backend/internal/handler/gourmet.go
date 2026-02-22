@@ -4,6 +4,7 @@ import (
 	"encoding/json" // JSONのエンコード・デコードを提供
 	"net/http"      // HTTPサーバーとクライアント機能を提供
 	"strconv"       // 文字列と数値の変換を行うパッケージ
+	"strings"
 
 	"backend/internal/service" // サービス層をインポート
 	"backend/internal/types"   // リクエスト・レスポンスの型定義をインポート
@@ -85,14 +86,15 @@ func (h *GourmetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 // 戻り値：GourmetSearchParams構造体とエラー（エラーがない場合はnil）
 func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams, error) {
 	// r.URL.Query()でURLからクエリパラメータを取得
-	// 例：/api/gourmet?service_area=SA11&keyword=居酒屋
+	// 例：/api/gourmet?address=渋谷&keyword=居酒屋
 	query := r.URL.Query()
 
-	// パラメータ取得：service_area または lat/lng のいずれかで検索できるようにする
-	serviceArea := query.Get("service_area")
+	// パラメータ取得：lat/lng または address または keyword のいずれかで検索できるようにする
 	latStr := query.Get("lat")
 	lngStr := query.Get("lng")
 	rangeStr := query.Get("range")
+	address := strings.TrimSpace(query.Get("address"))
+	keyword := strings.TrimSpace(query.Get("keyword"))
 
 	var lat, lng float64
 	var rng int
@@ -114,22 +116,23 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 	start := parseIntOrDefault(query.Get("start"), 1)  // 開始位置（デフォルト：1）
 	count := parseIntOrDefault(query.Get("count"), 20) // 取得件数（デフォルト：20）
 
-	// 少なくともservice_areaかlat/lngのいずれかが必要
-	if serviceArea == "" && (lat == 0 || lng == 0) {
-		return types.GourmetSearchParams{}, &ValidationError{Message: "either service_area or lat/lng must be provided"}
+	hasLocation := lat != 0 && lng != 0
+	hasAddress := address != ""
+	hasKeyword := keyword != ""
+	if !hasLocation && !hasAddress && !hasKeyword {
+		return types.GourmetSearchParams{}, &ValidationError{Message: "either lat/lng, address, or keyword must be provided"}
 	}
 
 	// GourmetSearchParams構造体を作成して返す
 	return types.GourmetSearchParams{
-		ServiceArea: serviceArea,          // 必須（lat/lng指定時は不要）
-		Address:     query.Get("address"), // オプション：住所
-		Genre:       query.Get("genre"),   // オプション：ジャンルコード
-		Keyword:     query.Get("keyword"), // オプション：キーワード
-		Start:       start,                // ページング：開始位置
-		Count:       count,                // ページング：取得件数
-		Lat:         lat,
-		Lng:         lng,
-		Range:       rng,
+		Address: address,            // オプション：住所
+		Genre:   query.Get("genre"), // オプション：ジャンルコード
+		Keyword: keyword,            // オプション：キーワード
+		Start:   start,              // ページング：開始位置
+		Count:   count,              // ページング：取得件数
+		Lat:     lat,
+		Lng:     lng,
+		Range:   rng,
 	}, nil // nilはエラーなしを意味する
 }
 

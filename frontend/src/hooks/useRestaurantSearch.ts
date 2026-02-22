@@ -67,7 +67,7 @@ export const useRestaurantSearch = (
         // searchRestaurants関数を呼び出してAPI通信
         // スプレッド構文（...params）で既存のパラメータを展開し、pageとcountを追加
         const response = await searchRestaurants({
-          ...params, // 元のパラメータ（serviceArea, address, genre, keywordなど）
+          ...params, // 元のパラメータ（address, genre, keyword, lat/lng など）
           page, // ページ番号を追加
           count: itemsPerPage, // 1ページの件数を追加
         });

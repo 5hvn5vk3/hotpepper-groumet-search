@@ -20,23 +20,30 @@
 
 ```go
 type GourmetSearchParams struct {
-    ServiceArea string // 必須：都道府県コード（例：SA11は東京）
-    Address     string // オプション：住所のキーワード
-    Genre       string // オプション：ジャンルコード
-    Keyword     string // オプション：フリーワード検索
-    Start       int    // ページング：検索開始位置（1〜1000）
-    Count       int    // ページング：取得件数（1〜100）
+    Address string  // オプション：住所のキーワード
+    Genre   string  // オプション：ジャンルコード
+    Keyword string  // オプション：フリーワード検索
+    Start   int     // ページング：検索開始位置（1〜1000）
+    Count   int     // ページング：取得件数（1〜100）
+    Lat     float64 // 緯度（lat/lng検索時）
+    Lng     float64 // 経度（lat/lng検索時）
+    Range   int     // 検索範囲（1〜5、lat/lng検索時）
 }
 ```
 
 **パラメータ詳細:**
 
-- `ServiceArea`: 必須パラメータ。都道府県を示すコード（SA11=東京、SA23=大阪など）
 - `Address`: 住所の部分一致検索に使用するキーワード
 - `Genre`: ジャンルコード（G001=居酒屋など）
 - `Keyword`: 店名やキャッチコピーなどのフリーワード検索
 - `Start`: 検索結果の開始位置（1〜1000 の範囲、デフォルト 1）
 - `Count`: 1 回のリクエストで取得する件数（1〜100 の範囲、デフォルト 20）
+- `Lat` / `Lng`: 現在地検索で使用する緯度・経度（両方指定時に有効）
+- `Range`: 現在地検索の範囲（1〜5）
+
+**入力ルール:**
+
+- `lat/lng` の組み合わせ、`address`、`keyword` のいずれか 1 つ以上が必要
 
 ## レスポンス型定義
 
@@ -138,12 +145,14 @@ import "backend/internal/types"
 
 // 検索パラメータを作成
 params := types.GourmetSearchParams{
-    ServiceArea: "SA11",
-    Address:     "新宿",
-    Genre:       "G001",
-    Keyword:     "個室",
-    Start:       1,
-    Count:       20,
+    Address: "新宿",
+    Genre:   "G001",
+    Keyword: "個室",
+    Lat:     35.6895,
+    Lng:     139.6917,
+    Range:   3,
+    Start:   1,
+    Count:   20,
 }
 
 // サービス層に渡して検索実行

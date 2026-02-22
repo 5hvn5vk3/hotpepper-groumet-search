@@ -28,67 +28,40 @@ paths:
       summary: レストラン検索
       description: |
         指定された条件でレストランを検索します。
-        service_areaは必須パラメータです。
+        `lat` と `lng` を指定した現在地検索、または `address` / `keyword` による検索が可能です。
+        少なくとも以下のいずれか 1 つが必要です。
+        - `lat` と `lng` の組み合わせ
+        - `address`
+        - `keyword`
         バックエンドは常に以下のパラメータをホットペッパーAPIに付与します：
         - `format=json`: JSON形式でレスポンスを取得
         - `type=lite`: 軽量版のレスポンス形式を使用
       operationId: searchRestaurants
       parameters:
-        - name: service_area
+        - name: lat
           in: query
-          description: サービスエリアコード（都道府県コード）
-          required: true
+          description: 緯度（現在地検索時に使用。`lng` とセットで指定）
           schema:
-            type: string
-            enum:
-              - SA11  # 東京
-              - SA12  # 神奈川
-              - SA13  # 埼玉
-              - SA14  # 千葉
-              - SA15  # 茨城
-              - SA16  # 栃木
-              - SA17  # 群馬
-              - SA21  # 滋賀
-              - SA22  # 京都
-              - SA23  # 大阪
-              - SA24  # 兵庫
-              - SA25  # 奈良
-              - SA26  # 和歌山
-              - SA31  # 岐阜
-              - SA32  # 静岡
-              - SA33  # 愛知
-              - SA34  # 三重
-              - SA41  # 北海道
-              - SA51  # 青森
-              - SA52  # 岩手
-              - SA53  # 宮城
-              - SA54  # 秋田
-              - SA55  # 山形
-              - SA56  # 福島
-              - SA61  # 新潟
-              - SA62  # 富山
-              - SA63  # 石川
-              - SA64  # 福井
-              - SA65  # 山梨
-              - SA66  # 長野
-              - SA71  # 鳥取
-              - SA72  # 島根
-              - SA73  # 岡山
-              - SA74  # 広島
-              - SA75  # 山口
-              - SA81  # 徳島
-              - SA82  # 香川
-              - SA83  # 愛媛
-              - SA84  # 高知
-              - SA91  # 福岡
-              - SA92  # 佐賀
-              - SA93  # 長崎
-              - SA94  # 熊本
-              - SA95  # 大分
-              - SA96  # 宮崎
-              - SA97  # 鹿児島
-              - SA98  # 沖縄
-          example: SA11
+            type: number
+            format: double
+          example: 35.6895
+        - name: lng
+          in: query
+          description: 経度（現在地検索時に使用。`lat` とセットで指定）
+          schema:
+            type: number
+            format: double
+          example: 139.6917
+        - name: range
+          in: query
+          description: 検索範囲（`lat/lng` 指定時のみ有効、1〜5）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+            default: 3
+          example: 3
         - name: address
           in: query
           description: 住所（部分一致検索）
@@ -167,7 +140,7 @@ paths:
             text/plain:
               schema:
                 type: string
-              example: "service_area is required"
+              example: "either lat/lng, address, or keyword must be provided"
         '500':
           description: サーバーエラー
           content:
