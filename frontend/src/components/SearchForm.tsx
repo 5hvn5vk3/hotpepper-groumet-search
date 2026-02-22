@@ -65,7 +65,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   // 現在地（Geolocation API）関連の状態
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
-  const [range, setRange] = useState<number>(3); // デフォルトは3（約1000m）
+  const [range, setRange] = useState<number>(3); // デフォルトは3（1000m）
 
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -173,11 +173,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
               onChange={(e) => setRange(Number(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value={1}>1: 約300m</option>
-              <option value={2}>2: 約500m</option>
-              <option value={3}>3: 約1000m</option>
-              <option value={4}>4: 約2000m</option>
-              <option value={5}>5: 約3000m</option>
+              <option value={1}>300m</option>
+              <option value={2}>500m</option>
+              <option value={3}>1000m</option>
+              <option value={4}>2000m</option>
+              <option value={5}>3000m</option>
             </select>
           </div>
         </div>
