@@ -33,7 +33,7 @@ func main() {
 	// 未設定の場合はローカル開発用のデフォルト値を使用
 	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
 	if allowedOrigin == "" {
-		allowedOrigin = "http://localhost:5173"
+		allowedOrigin = "http://localhost:3000"
 	}
 
 	// サービス層の初期化
