@@ -5,12 +5,12 @@ import "net/http"
 // CORS は CORS ヘッダーを追加するミドルウェア関数
 // CORS (Cross-Origin Resource Sharing) は異なるオリジン（ドメイン）からのリクエストを許可する仕組み
 // ミドルウェアとは、リクエスト処理の前後に共通処理を挟み込むための仕組み
-func CORS(next http.HandlerFunc) http.HandlerFunc {
+// allowedOrigin: 許可するオリジン（例: "http://localhost:5173"）。環境変数 ALLOWED_ORIGIN から渡す
+func CORS(allowedOrigin string, next http.HandlerFunc) http.HandlerFunc {
 	// 新しいハンドラー関数を返す（クロージャー）
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Access-Control-Allow-Origin: すべてのオリジン（*）からのアクセスを許可
-		// 本番環境では特定のドメインのみを許可することが推奨される
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		// Access-Control-Allow-Origin: 引数で受け取ったオリジンのみを許可
+		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 
 		// Access-Control-Allow-Methods: 許可するHTTPメソッドを指定
 		// GETとOPTIONSメソッドのみを許可

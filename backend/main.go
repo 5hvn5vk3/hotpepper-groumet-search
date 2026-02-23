@@ -29,6 +29,13 @@ func main() {
 		log.Fatal("HOTPEPPER_API_KEY environment variable is required")
 	}
 
+	// 許可するオリジンを環境変数から取得
+	// 未設定の場合はローカル開発用のデフォルト値を使用
+	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+	if allowedOrigin == "" {
+		allowedOrigin = "http://localhost:5173"
+	}
+
 	// サービス層の初期化
 	// ホットペッパーAPIとの通信を担当するサービスオブジェクトを作成
 	hotpepperService := service.NewHotpepperService(apiKey)
@@ -45,9 +52,9 @@ func main() {
 	mux := http.NewServeMux()
 	// "/api/gourmet"へのリクエストをグルメハンドラーに紐付け
 	// CORSMiddlewareでラップすることで、クロスオリジンリクエストを許可
-	mux.HandleFunc("/api/gourmet", middleware.CORS(gourmetHandler.Handle))
+	mux.HandleFunc("/api/gourmet", middleware.CORS(allowedOrigin, gourmetHandler.Handle))
 	// "/api/genre"へのリクエストをジャンルハンドラーに紐付け
-	mux.HandleFunc("/api/genre", middleware.CORS(genreHandler.Handle))
+	mux.HandleFunc("/api/genre", middleware.CORS(allowedOrigin, genreHandler.Handle))
 
 	// サーバー起動のログを出力
 	log.Printf("Server starting on port %s", port)
