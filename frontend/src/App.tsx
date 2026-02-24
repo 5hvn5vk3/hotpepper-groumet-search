@@ -13,6 +13,7 @@ import type { SearchParams, Shop } from "@/types";
 // カスタムフックをインポート
 import { useRestaurantSearch } from "@/hooks/useRestaurantSearch"; // レストラン検索ロジックを管理
 import { useModal } from "@/hooks/useModal"; // モーダルの開閉を管理
+import { useState } from "react"; // 現在地状態を管理
 // 定数をインポート
 import { ITEMS_PER_PAGE } from "@/constants"; // 1ページあたりの表示件数
 
@@ -34,6 +35,16 @@ function App() {
   // useModalフック：モーダル（詳細画面）の開閉状態を管理
   // Shop型のデータを扱うモーダル
   const { isOpen, data: selectedRestaurant, open, close } = useModal<Shop>();
+
+  // ユーザーの現在地（緯度・経度）の状態
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
+
+  // SearchFormから現在地が取得されたときのハンドラー
+  const handleLocationChange = (lat: number, lng: number) => {
+    setUserLat(lat);
+    setUserLng(lng);
+  };
 
   // 検索フォームから検索が実行されたときのハンドラー関数
   const handleSearch = (params: SearchParams) => {
@@ -71,7 +82,11 @@ function App() {
         {/* 検索フォームコンポーネント
             onSearch: 検索実行時のコールバック関数
             isLoading: ローディング中は検索ボタンを無効化 */}
-        <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+        <SearchForm
+          onSearch={handleSearch}
+          isLoading={isLoading}
+          onLocationChange={handleLocationChange}
+        />
 
         {/* 条件付きレンダリング：エラーがある場合のみ表示
             &&演算子は左側がtrueの場合に右側を評価・レンダリング */}
@@ -88,6 +103,8 @@ function App() {
             // ?? []: Null合体演算子（左側がnullまたはundefinedの場合、右側の空配列を使用）
             restaurants={searchResult?.shop ?? []}
             onSelectRestaurant={handleSelectRestaurant}
+            userLat={userLat ?? undefined}
+            userLng={userLng ?? undefined}
           />
         )}
 
@@ -107,7 +124,12 @@ function App() {
 
       {/* モーダルが開いており、かつレストランが選択されている場合、詳細画面を表示 */}
       {isOpen && selectedRestaurant && (
-        <RestaurantDetail restaurant={selectedRestaurant} onClose={close} />
+        <RestaurantDetail
+          restaurant={selectedRestaurant}
+          onClose={close}
+          userLat={userLat ?? undefined}
+          userLng={userLng ?? undefined}
+        />
       )}
     </div>
   );

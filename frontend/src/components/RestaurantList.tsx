@@ -2,17 +2,23 @@
 import React from "react";
 // Shop型の定義をインポート
 import type { Shop } from "@/types";
+// 距離計算ユーティリティをインポート
+import { calculateDistance, formatDistance } from "@/utils/distance";
 
 // RestaurantListコンポーネントのPropsの型定義
 interface RestaurantListProps {
   restaurants: Shop[]; // 表示するレストランの配列
   onSelectRestaurant: (restaurant: Shop) => void; // レストランがクリックされた時のコールバック
+  userLat?: number; // ユーザーの緯度（現在地）
+  userLng?: number; // ユーザーの経度（現在地）
 }
 
 // RestaurantListコンポーネント：レストラン一覧をカード形式で表示
 export const RestaurantList: React.FC<RestaurantListProps> = ({
   restaurants,
   onSelectRestaurant,
+  userLat,
+  userLng,
 }) => {
   // レストランが0件の場合、「結果がありません」メッセージを表示
   if (restaurants.length === 0) {
@@ -67,6 +73,20 @@ export const RestaurantList: React.FC<RestaurantListProps> = ({
             <p className="text-xs text-gray-500 truncate">
               {restaurant.address}
             </p>
+            {/* 現在地からの距離 */}
+            {userLat !== undefined && userLng !== undefined && (
+              <p className="text-xs text-green-600 font-medium mt-1">
+                📍
+                {formatDistance(
+                  calculateDistance(
+                    userLat,
+                    userLng,
+                    restaurant.lat,
+                    restaurant.lng,
+                  ),
+                )}
+              </p>
+            )}
           </div>
         </div>
       ))}

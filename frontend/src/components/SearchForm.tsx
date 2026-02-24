@@ -11,6 +11,7 @@ import { SearchTextField } from "./SearchTextField";
 interface SearchFormProps {
   onSearch: (params: GourmetSearchParams) => void; // 検索実行時のコールバック関数
   isLoading: boolean; // ローディング中かどうか
+  onLocationChange?: (lat: number, lng: number) => void; // 現在地が変化したときのコールバック
 }
 
 const EMPTY_SEARCH_MESSAGE =
@@ -54,6 +55,7 @@ const isReloadNavigation = (): boolean => {
 export const SearchForm: React.FC<SearchFormProps> = ({
   onSearch,
   isLoading,
+  onLocationChange,
 }) => {
   // 住所キーワードの状態（初期値：空文字列）
   const [address, setAddress] = useState("");
@@ -100,6 +102,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
             storageService.set(LOCATION_STORAGE_KEY, nextLocation);
             setHasStoredLocation(true);
             setValidationMessage("");
+            onLocationChange?.(nextLocation.lat, nextLocation.lng);
             resolve(nextLocation);
           },
           (err) => {
@@ -206,6 +209,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     if (hasSavedLocation) {
       setLat(savedLocation.lat);
       setLng(savedLocation.lng);
+      onLocationChange?.(savedLocation.lat, savedLocation.lng);
     }
 
     const shouldRefreshLocation =

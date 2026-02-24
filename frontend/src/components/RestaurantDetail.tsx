@@ -2,17 +2,23 @@
 import React from "react";
 // Shop型の定義をインポート
 import type { Shop } from "@/types";
+// 距離計算ユーティリティをインポート
+import { calculateDistance, formatDistance } from "@/utils/distance";
 
 // RestaurantDetailコンポーネントのPropsの型定義
 interface RestaurantDetailProps {
   restaurant: Shop; // 表示するレストランのデータ
   onClose: () => void; // モーダルを閉じるためのコールバック関数
+  userLat?: number; // ユーザーの緯度（現在地）
+  userLng?: number; // ユーザーの経度（現在地）
 }
 
 // RestaurantDetailコンポーネント：レストランの詳細情報をモーダルで表示
 export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
   restaurant,
   onClose,
+  userLat,
+  userLng,
 }) => {
   const mapQuery = encodeURIComponent(
     `${restaurant.name} ${restaurant.address}`,
@@ -83,6 +89,26 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
               <h4 className="font-semibold text-gray-700 mb-1">住所</h4>
               <p className="text-gray-600">{restaurant.address}</p>
             </div>
+
+            {/* 現在地からの距離セクション */}
+            {userLat !== undefined && userLng !== undefined && (
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-1">
+                  現在地からの距離
+                </h4>
+                <p className="text-green-600 font-medium">
+                  📍 約
+                  {formatDistance(
+                    calculateDistance(
+                      userLat,
+                      userLng,
+                      restaurant.lat,
+                      restaurant.lng,
+                    ),
+                  )}
+                </p>
+              </div>
+            )}
 
             {/* 営業時間 */}
             {restaurant.open && (
