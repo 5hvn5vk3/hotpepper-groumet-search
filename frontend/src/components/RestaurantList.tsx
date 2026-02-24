@@ -69,14 +69,14 @@ export const RestaurantList: React.FC<RestaurantListProps> = ({
               {/* line-clamp-2: テキストを2行までに制限し、それ以上は省略 */}
               {restaurant.catch}
             </p>
-            {/* 住所 */}
+            {/* アクセス */}
             <p className="text-xs text-gray-500 truncate">
-              {restaurant.address}
+              アクセス：{restaurant.access}
             </p>
             {/* 現在地からの距離 */}
             {userLat !== undefined && userLng !== undefined && (
               <p className="text-xs text-green-600 font-medium mt-1">
-                📍
+                📍ここから
                 {formatDistance(
                   calculateDistance(
                     userLat,

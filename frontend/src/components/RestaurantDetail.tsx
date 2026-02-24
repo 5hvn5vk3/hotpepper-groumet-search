@@ -97,7 +97,6 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
                   現在地からの距離
                 </h4>
                 <p className="text-green-600 font-medium">
-                  📍
                   {formatDistance(
                     calculateDistance(
                       userLat,
