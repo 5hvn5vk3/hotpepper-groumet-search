@@ -85,6 +85,7 @@ function App() {
         <SearchForm
           onSearch={handleSearch}
           isLoading={isLoading}
+          hasSearched={hasSearched}
           onLocationChange={handleLocationChange}
         />
 

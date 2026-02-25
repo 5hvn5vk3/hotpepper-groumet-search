@@ -305,11 +305,12 @@ describe("SearchForm", () => {
     expect(searchButton).toBeDisabled();
   });
 
-  it("検索コンテキストがない場合はジャンルタブが無効化される", () => {
+  it("検索実行前はジャンルタブを表示しない", () => {
     render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
 
-    expect(screen.getByRole("tab", { name: "すべて" })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "居酒屋" })).toBeDisabled();
+    expect(screen.queryByRole("tablist", { name: "ジャンルタブ" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "すべて" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "居酒屋" })).not.toBeInTheDocument();
   });
 
   it("検索ボタン押下時に住所とキーワードをセッションストレージへ保存し、再検索時に更新する", () => {
@@ -366,7 +367,13 @@ describe("SearchForm", () => {
       }),
     );
 
-    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+    render(
+      <SearchForm
+        onSearch={mockOnSearch as any}
+        isLoading={false}
+        hasSearched={true}
+      />,
+    );
 
     fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
       target: { value: "未保存住所" },
@@ -405,7 +412,13 @@ describe("SearchForm", () => {
       }),
     );
 
-    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
+    render(
+      <SearchForm
+        onSearch={mockOnSearch as any}
+        isLoading={false}
+        hasSearched={true}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("tab", { name: "居酒屋" }));
     fireEvent.click(screen.getByRole("tab", { name: "すべて" }));

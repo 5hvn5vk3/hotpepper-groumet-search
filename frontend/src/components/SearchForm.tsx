@@ -11,6 +11,7 @@ import { SearchTextField } from "./SearchTextField";
 interface SearchFormProps {
   onSearch: (params: GourmetSearchParams) => void; // 検索実行時のコールバック関数
   isLoading: boolean; // ローディング中かどうか
+  hasSearched?: boolean; // 検索実行済みかどうか
   onLocationChange?: (lat: number, lng: number) => void; // 現在地が変化したときのコールバック
 }
 
@@ -79,6 +80,7 @@ const isReloadNavigation = (): boolean => {
 export const SearchForm: React.FC<SearchFormProps> = ({
   onSearch,
   isLoading,
+  hasSearched = false,
   onLocationChange,
 }) => {
   // 住所キーワードの状態（初期値：空文字列）
@@ -97,7 +99,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [range, setRange] = useState<number>(3); // デフォルトは3（1000m）
-  const [hasSearchedOnce, setHasSearchedOnce] = useState(false);
   const [hasStoredLocation, setHasStoredLocation] = useState<boolean>(() => {
     const savedLocation =
       storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
@@ -178,9 +179,10 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 
   const hasLocationContext = hasStoredLocation || (lat !== null && lng !== null);
   const canUseGenreTabs =
+    hasSearched &&
     !isLoading &&
     !genresLoading &&
-    (hasLocationContext || hasPersistedText || hasSearchedOnce);
+    (hasLocationContext || hasPersistedText);
 
   interface ExecuteSearchOptions {
     addressValue: string;
@@ -223,7 +225,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       }
 
       setValidationMessage("");
-      setHasSearchedOnce(true);
       onSearch({
         address: hasAddress ? trimmedAddress : undefined,
         genre: effectiveGenre || undefined,
@@ -404,57 +405,59 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         />
       </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          ジャンル
-        </label>
-        <div
-          role="tablist"
-          aria-label="ジャンルタブ"
-          className="flex items-start gap-2 overflow-x-auto pb-2 md:overflow-visible"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedGenre === ""}
-            aria-label="すべて"
-            disabled={!canUseGenreTabs}
-            onClick={() => handleGenreTabClick("")}
-            className={
-              "shrink-0 rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line transition-colors " +
-              "md:[writing-mode:vertical-rl] md:[text-orientation:upright] md:h-36 md:min-w-[3.25rem] " +
-              (selectedGenre === ""
-                ? "bg-white text-red-600 border-red-600"
-                : "bg-red-600 text-white border-red-600") +
-              (!canUseGenreTabs ? " opacity-50 cursor-not-allowed" : "")
-            }
+      {hasSearched && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            ジャンル
+          </label>
+          <div
+            role="tablist"
+            aria-label="ジャンルタブ"
+            className="flex items-start gap-2 overflow-x-auto pb-2 md:overflow-visible"
           >
-            すべて
-          </button>
-
-          {genres.map((genre) => (
             <button
-              key={genre.code}
               type="button"
               role="tab"
-              aria-selected={selectedGenre === genre.code}
-              aria-label={genre.name}
+              aria-selected={selectedGenre === ""}
+              aria-label="すべて"
               disabled={!canUseGenreTabs}
-              onClick={() => handleGenreTabClick(genre.code)}
+              onClick={() => handleGenreTabClick("")}
               className={
                 "shrink-0 rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line transition-colors " +
                 "md:[writing-mode:vertical-rl] md:[text-orientation:upright] md:h-36 md:min-w-[3.25rem] " +
-                (selectedGenre === genre.code
+                (selectedGenre === ""
                   ? "bg-white text-red-600 border-red-600"
                   : "bg-red-600 text-white border-red-600") +
                 (!canUseGenreTabs ? " opacity-50 cursor-not-allowed" : "")
               }
             >
-              {splitGenreLabel(genre.name)}
+              すべて
             </button>
-          ))}
+
+            {genres.map((genre) => (
+              <button
+                key={genre.code}
+                type="button"
+                role="tab"
+                aria-selected={selectedGenre === genre.code}
+                aria-label={genre.name}
+                disabled={!canUseGenreTabs}
+                onClick={() => handleGenreTabClick(genre.code)}
+                className={
+                  "shrink-0 rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line transition-colors " +
+                  "md:[writing-mode:vertical-rl] md:[text-orientation:upright] md:h-36 md:min-w-[3.25rem] " +
+                  (selectedGenre === genre.code
+                    ? "bg-white text-red-600 border-red-600"
+                    : "bg-red-600 text-white border-red-600") +
+                  (!canUseGenreTabs ? " opacity-50 cursor-not-allowed" : "")
+                }
+              >
+                {splitGenreLabel(genre.name)}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {validationMessage && (
         <p
