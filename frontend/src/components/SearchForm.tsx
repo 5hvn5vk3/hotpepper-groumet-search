@@ -18,19 +18,12 @@ interface SearchFormProps {
 const EMPTY_SEARCH_MESSAGE =
   "位置情報が取得できないため検索できません。住所またはキーワード検索をお試しください";
 const LOCATION_STORAGE_KEY = "searchCurrentLocation";
-const SEARCH_TEXT_STORAGE_KEY = "searchTextContext";
 const LOCATION_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
 interface StoredLocation {
   lat: number;
   lng: number;
   timestamp: number;
-}
-
-interface StoredSearchContext {
-  address: string;
-  keyword: string;
-  updatedAt: number;
 }
 
 const isStoredLocation = (value: unknown): value is StoredLocation => {
@@ -43,21 +36,6 @@ const isStoredLocation = (value: unknown): value is StoredLocation => {
     Number.isFinite(candidate.lat) &&
     Number.isFinite(candidate.lng) &&
     Number.isFinite(candidate.timestamp)
-  );
-};
-
-const isStoredSearchContext = (
-  value: unknown,
-): value is StoredSearchContext => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<StoredSearchContext>;
-  return (
-    typeof candidate.address === "string" &&
-    typeof candidate.keyword === "string" &&
-    Number.isFinite(candidate.updatedAt)
   );
 };
 
@@ -104,37 +82,10 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
     return isStoredLocation(savedLocation);
   });
-  const [hasPersistedText, setHasPersistedText] = useState<boolean>(() => {
-    const savedSearchContext = storageService.get<StoredSearchContext>(
-      SEARCH_TEXT_STORAGE_KEY,
-    );
-    if (!isStoredSearchContext(savedSearchContext)) {
-      return false;
-    }
-
-    return (
-      savedSearchContext.address.trim() !== "" ||
-      savedSearchContext.keyword.trim() !== ""
-    );
-  });
 
   const getStoredLocation = useCallback((): StoredLocation | null => {
     const savedLocation = storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
     return isStoredLocation(savedLocation) ? savedLocation : null;
-  }, []);
-
-  const getStoredSearchContext = useCallback(() => {
-    const savedSearchContext = storageService.get<StoredSearchContext>(
-      SEARCH_TEXT_STORAGE_KEY,
-    );
-    if (!isStoredSearchContext(savedSearchContext)) {
-      return { address: "", keyword: "" };
-    }
-
-    return {
-      address: savedSearchContext.address.trim(),
-      keyword: savedSearchContext.keyword.trim(),
-    };
   }, []);
 
   const requestCurrentLocation = useCallback(
@@ -178,18 +129,18 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   );
 
   const hasLocationContext = hasStoredLocation || (lat !== null && lng !== null);
+  const hasSearchText = address.trim() !== "" || keyword.trim() !== "";
   const canUseGenreTabs =
     hasSearched &&
     !isLoading &&
     !genresLoading &&
-    (hasLocationContext || hasPersistedText);
+    (hasLocationContext || hasSearchText);
 
   interface ExecuteSearchOptions {
     addressValue: string;
     keywordValue: string;
     locationOverride?: StoredLocation | null;
     genreOverride?: string;
-    persistSearchText?: boolean;
   }
 
   const executeSearch = useCallback(
@@ -198,7 +149,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       keywordValue,
       locationOverride,
       genreOverride,
-      persistSearchText = false,
     }: ExecuteSearchOptions): boolean => {
       const trimmedAddress = addressValue.trim();
       const trimmedKeyword = keywordValue.trim();
@@ -213,15 +163,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       if (!hasLocation && !hasAddress && !hasKeyword) {
         setValidationMessage(EMPTY_SEARCH_MESSAGE);
         return false;
-      }
-
-      if (persistSearchText) {
-        storageService.set(SEARCH_TEXT_STORAGE_KEY, {
-          address: trimmedAddress,
-          keyword: trimmedKeyword,
-          updatedAt: Date.now(),
-        });
-        setHasPersistedText(hasAddress || hasKeyword);
       }
 
       setValidationMessage("");
@@ -249,7 +190,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         addressValue: address,
         keywordValue: keyword,
         locationOverride: locationFromStorage,
-        persistSearchText: true,
       });
       return;
     }
@@ -270,7 +210,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
                 addressValue: address,
                 keywordValue: keyword,
                 locationOverride: nextLocation ?? locationFromStorage,
-                persistSearchText: true,
               });
             });
             return;
@@ -279,7 +218,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
             addressValue: address,
             keywordValue: keyword,
             locationOverride: locationFromStorage,
-            persistSearchText: true,
           });
         })
         .catch((err) => {
@@ -288,7 +226,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
             addressValue: address,
             keywordValue: keyword,
             locationOverride: locationFromStorage,
-            persistSearchText: true,
           });
         });
       return;
@@ -298,7 +235,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       addressValue: address,
       keywordValue: keyword,
       locationOverride: locationFromStorage,
-      persistSearchText: true,
     });
   };
 
@@ -309,12 +245,10 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 
     setSelectedGenre(genreCode);
     const storedLocation = getStoredLocation();
-    const { address: storedAddress, keyword: storedKeyword } =
-      getStoredSearchContext();
 
     executeSearch({
-      addressValue: storedAddress,
-      keywordValue: storedKeyword,
+      addressValue: address,
+      keywordValue: keyword,
       locationOverride: storedLocation,
       genreOverride: genreCode,
     });

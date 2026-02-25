@@ -17,7 +17,6 @@ const mockGenres = [
   { code: "G002", name: "イタリアン" },
 ];
 const LOCATION_STORAGE_KEY = "searchCurrentLocation";
-const SEARCH_TEXT_STORAGE_KEY = "searchTextContext";
 const LOCATION_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
 describe("SearchForm", () => {
@@ -313,57 +312,13 @@ describe("SearchForm", () => {
     expect(screen.queryByRole("tab", { name: "居酒屋" })).not.toBeInTheDocument();
   });
 
-  it("検索ボタン押下時に住所とキーワードをセッションストレージへ保存し、再検索時に更新する", () => {
-    vi.spyOn(Date, "now")
-      .mockReturnValueOnce(1700000000000)
-      .mockReturnValueOnce(1700000001000);
-
-    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
-
-    fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
-      target: { value: "新宿" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("例: 個室"), {
-      target: { value: "個室" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "検索（おススメ順）" }));
-
-    expect(JSON.parse(sessionStorage.getItem(SEARCH_TEXT_STORAGE_KEY) ?? "{}")).toEqual({
-      address: "新宿",
-      keyword: "個室",
-      updatedAt: 1700000000000,
-    });
-
-    fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
-      target: { value: "渋谷" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("例: 個室"), {
-      target: { value: "海鮮" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "検索（おススメ順）" }));
-
-    expect(JSON.parse(sessionStorage.getItem(SEARCH_TEXT_STORAGE_KEY) ?? "{}")).toEqual({
-      address: "渋谷",
-      keyword: "海鮮",
-      updatedAt: 1700000001000,
-    });
-  });
-
-  it("ジャンルタブ切替時はセッションストレージの位置情報・住所・キーワードで検索する", () => {
+  it("ジャンルタブ切替時は位置情報と現在入力中の住所・キーワードで検索する", () => {
     sessionStorage.setItem(
       LOCATION_STORAGE_KEY,
       JSON.stringify({
         lat: 35.1,
         lng: 139.1,
         timestamp: 1700000000000,
-      }),
-    );
-    sessionStorage.setItem(
-      SEARCH_TEXT_STORAGE_KEY,
-      JSON.stringify({
-        address: "保存済み住所",
-        keyword: "保存済みキーワード",
-        updatedAt: 1700000000000,
       }),
     );
 
@@ -376,18 +331,18 @@ describe("SearchForm", () => {
     );
 
     fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
-      target: { value: "未保存住所" },
+      target: { value: "入力中住所" },
     });
     fireEvent.change(screen.getByPlaceholderText("例: 個室"), {
-      target: { value: "未保存キーワード" },
+      target: { value: "入力中キーワード" },
     });
 
     fireEvent.click(screen.getByRole("tab", { name: "居酒屋" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
-      address: "保存済み住所",
+      address: "入力中住所",
       genre: "G001",
-      keyword: "保存済みキーワード",
+      keyword: "入力中キーワード",
       lat: 35.1,
       lng: 139.1,
       range: 3,
@@ -403,14 +358,6 @@ describe("SearchForm", () => {
         timestamp: 1700000000000,
       }),
     );
-    sessionStorage.setItem(
-      SEARCH_TEXT_STORAGE_KEY,
-      JSON.stringify({
-        address: "保存済み住所",
-        keyword: "保存済みキーワード",
-        updatedAt: 1700000000000,
-      }),
-    );
 
     render(
       <SearchForm
@@ -420,13 +367,20 @@ describe("SearchForm", () => {
       />,
     );
 
+    fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
+      target: { value: "入力中住所" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("例: 個室"), {
+      target: { value: "入力中キーワード" },
+    });
+
     fireEvent.click(screen.getByRole("tab", { name: "居酒屋" }));
     fireEvent.click(screen.getByRole("tab", { name: "すべて" }));
 
     expect(mockOnSearch).toHaveBeenNthCalledWith(2, {
-      address: "保存済み住所",
+      address: "入力中住所",
       genre: undefined,
-      keyword: "保存済みキーワード",
+      keyword: "入力中キーワード",
       lat: 35.1,
       lng: 139.1,
       range: 3,
