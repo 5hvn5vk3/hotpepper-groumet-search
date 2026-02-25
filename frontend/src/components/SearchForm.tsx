@@ -17,12 +17,19 @@ interface SearchFormProps {
 const EMPTY_SEARCH_MESSAGE =
   "位置情報が取得できないため検索できません。住所またはキーワード検索をお試しください";
 const LOCATION_STORAGE_KEY = "searchCurrentLocation";
+const SEARCH_TEXT_STORAGE_KEY = "searchTextContext";
 const LOCATION_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
 interface StoredLocation {
   lat: number;
   lng: number;
   timestamp: number;
+}
+
+interface StoredSearchContext {
+  address: string;
+  keyword: string;
+  updatedAt: number;
 }
 
 const isStoredLocation = (value: unknown): value is StoredLocation => {
@@ -37,6 +44,23 @@ const isStoredLocation = (value: unknown): value is StoredLocation => {
     Number.isFinite(candidate.timestamp)
   );
 };
+
+const isStoredSearchContext = (
+  value: unknown,
+): value is StoredSearchContext => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<StoredSearchContext>;
+  return (
+    typeof candidate.address === "string" &&
+    typeof candidate.keyword === "string" &&
+    Number.isFinite(candidate.updatedAt)
+  );
+};
+
+const splitGenreLabel = (label: string): string => label.replace(/・/g, "\n・");
 
 const isReloadNavigation = (): boolean => {
   if (typeof performance === "undefined") {
@@ -73,11 +97,44 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [range, setRange] = useState<number>(3); // デフォルトは3（1000m）
+  const [hasSearchedOnce, setHasSearchedOnce] = useState(false);
   const [hasStoredLocation, setHasStoredLocation] = useState<boolean>(() => {
     const savedLocation =
       storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
     return isStoredLocation(savedLocation);
   });
+  const [hasPersistedText, setHasPersistedText] = useState<boolean>(() => {
+    const savedSearchContext = storageService.get<StoredSearchContext>(
+      SEARCH_TEXT_STORAGE_KEY,
+    );
+    if (!isStoredSearchContext(savedSearchContext)) {
+      return false;
+    }
+
+    return (
+      savedSearchContext.address.trim() !== "" ||
+      savedSearchContext.keyword.trim() !== ""
+    );
+  });
+
+  const getStoredLocation = useCallback((): StoredLocation | null => {
+    const savedLocation = storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    return isStoredLocation(savedLocation) ? savedLocation : null;
+  }, []);
+
+  const getStoredSearchContext = useCallback(() => {
+    const savedSearchContext = storageService.get<StoredSearchContext>(
+      SEARCH_TEXT_STORAGE_KEY,
+    );
+    if (!isStoredSearchContext(savedSearchContext)) {
+      return { address: "", keyword: "" };
+    }
+
+    return {
+      address: savedSearchContext.address.trim(),
+      keyword: savedSearchContext.keyword.trim(),
+    };
+  }, []);
 
   const requestCurrentLocation = useCallback(
     (showErrorAlert: boolean): Promise<StoredLocation | null> => {
@@ -116,17 +173,36 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         );
       });
     },
-    [],
+    [onLocationChange],
   );
 
+  const hasLocationContext = hasStoredLocation || (lat !== null && lng !== null);
+  const canUseGenreTabs =
+    !isLoading &&
+    !genresLoading &&
+    (hasLocationContext || hasPersistedText || hasSearchedOnce);
+
+  interface ExecuteSearchOptions {
+    addressValue: string;
+    keywordValue: string;
+    locationOverride?: StoredLocation | null;
+    genreOverride?: string;
+    persistSearchText?: boolean;
+  }
+
   const executeSearch = useCallback(
-    (
-      trimmedAddress: string,
-      trimmedKeyword: string,
-      locationOverride?: StoredLocation | null,
-    ) => {
+    ({
+      addressValue,
+      keywordValue,
+      locationOverride,
+      genreOverride,
+      persistSearchText = false,
+    }: ExecuteSearchOptions): boolean => {
+      const trimmedAddress = addressValue.trim();
+      const trimmedKeyword = keywordValue.trim();
       const effectiveLat = locationOverride?.lat ?? lat;
       const effectiveLng = locationOverride?.lng ?? lng;
+      const effectiveGenre = genreOverride ?? selectedGenre;
 
       const hasLocation = effectiveLat !== null && effectiveLng !== null;
       const hasAddress = trimmedAddress !== "";
@@ -134,18 +210,29 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 
       if (!hasLocation && !hasAddress && !hasKeyword) {
         setValidationMessage(EMPTY_SEARCH_MESSAGE);
-        return;
+        return false;
+      }
+
+      if (persistSearchText) {
+        storageService.set(SEARCH_TEXT_STORAGE_KEY, {
+          address: trimmedAddress,
+          keyword: trimmedKeyword,
+          updatedAt: Date.now(),
+        });
+        setHasPersistedText(hasAddress || hasKeyword);
       }
 
       setValidationMessage("");
+      setHasSearchedOnce(true);
       onSearch({
         address: hasAddress ? trimmedAddress : undefined,
-        genre: selectedGenre || undefined,
+        genre: effectiveGenre || undefined,
         keyword: hasKeyword ? trimmedKeyword : undefined,
         lat: hasLocation ? effectiveLat : undefined,
         lng: hasLocation ? effectiveLng : undefined,
         range: hasLocation ? range : undefined,
       });
+      return true;
     },
     [lat, lng, onSearch, range, selectedGenre],
   );
@@ -154,22 +241,21 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const trimmedAddress = address.trim();
-    const trimmedKeyword = keyword.trim();
-    const savedLocation =
-      storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
-    const locationFromStorage = isStoredLocation(savedLocation)
-      ? savedLocation
-      : null;
+    const locationFromStorage = getStoredLocation();
 
     if (!navigator.geolocation) {
-      executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
+      executeSearch({
+        addressValue: address,
+        keywordValue: keyword,
+        locationOverride: locationFromStorage,
+        persistSearchText: true,
+      });
       return;
     }
 
     const hasExpiredSavedLocation =
-      isStoredLocation(savedLocation) &&
-      Date.now() - savedLocation.timestamp >= LOCATION_REFRESH_INTERVAL_MS;
+      locationFromStorage !== null &&
+      Date.now() - locationFromStorage.timestamp >= LOCATION_REFRESH_INTERVAL_MS;
     const supportsPermissionQuery =
       typeof navigator.permissions?.query === "function";
 
@@ -179,24 +265,58 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         .then((permissionStatus) => {
           if (permissionStatus.state === "granted") {
             void requestCurrentLocation(true).then((nextLocation) => {
-              executeSearch(
-                trimmedAddress,
-                trimmedKeyword,
-                nextLocation ?? locationFromStorage,
-              );
+              executeSearch({
+                addressValue: address,
+                keywordValue: keyword,
+                locationOverride: nextLocation ?? locationFromStorage,
+                persistSearchText: true,
+              });
             });
             return;
           }
-          executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
+          executeSearch({
+            addressValue: address,
+            keywordValue: keyword,
+            locationOverride: locationFromStorage,
+            persistSearchText: true,
+          });
         })
         .catch((err) => {
           console.error(err);
-          executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
+          executeSearch({
+            addressValue: address,
+            keywordValue: keyword,
+            locationOverride: locationFromStorage,
+            persistSearchText: true,
+          });
         });
       return;
     }
 
-    executeSearch(trimmedAddress, trimmedKeyword, locationFromStorage);
+    executeSearch({
+      addressValue: address,
+      keywordValue: keyword,
+      locationOverride: locationFromStorage,
+      persistSearchText: true,
+    });
+  };
+
+  const handleGenreTabClick = (genreCode: string) => {
+    if (!canUseGenreTabs || selectedGenre === genreCode) {
+      return;
+    }
+
+    setSelectedGenre(genreCode);
+    const storedLocation = getStoredLocation();
+    const { address: storedAddress, keyword: storedKeyword } =
+      getStoredSearchContext();
+
+    executeSearch({
+      addressValue: storedAddress,
+      keywordValue: storedKeyword,
+      locationOverride: storedLocation,
+      genreOverride: genreCode,
+    });
   };
 
   // ページアクセス時に現在地取得を試行
@@ -220,7 +340,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     if (shouldRefreshLocation) {
       void requestCurrentLocation(false);
     }
-  }, [requestCurrentLocation]);
+  }, [onLocationChange, requestCurrentLocation]);
 
   return (
     <form
@@ -271,25 +391,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           }}
         />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            ジャンル
-          </label>
-          <select
-            value={selectedGenre}
-            onChange={(e) => setSelectedGenre(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={genresLoading}
-          >
-            <option value="">すべて</option>
-            {genres.map((genre) => (
-              <option key={genre.code} value={genre.code}>
-                {genre.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <SearchTextField
           label="キーワード"
           placeholder="例: 個室"
@@ -301,6 +402,58 @@ export const SearchForm: React.FC<SearchFormProps> = ({
             }
           }}
         />
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          ジャンル
+        </label>
+        <div
+          role="tablist"
+          aria-label="ジャンルタブ"
+          className="flex items-start gap-2 overflow-x-auto pb-2 md:overflow-visible"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedGenre === ""}
+            aria-label="すべて"
+            disabled={!canUseGenreTabs}
+            onClick={() => handleGenreTabClick("")}
+            className={
+              "shrink-0 rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line transition-colors " +
+              "md:[writing-mode:vertical-rl] md:[text-orientation:upright] md:h-36 md:min-w-[3.25rem] " +
+              (selectedGenre === ""
+                ? "bg-white text-red-600 border-red-600"
+                : "bg-red-600 text-white border-red-600") +
+              (!canUseGenreTabs ? " opacity-50 cursor-not-allowed" : "")
+            }
+          >
+            すべて
+          </button>
+
+          {genres.map((genre) => (
+            <button
+              key={genre.code}
+              type="button"
+              role="tab"
+              aria-selected={selectedGenre === genre.code}
+              aria-label={genre.name}
+              disabled={!canUseGenreTabs}
+              onClick={() => handleGenreTabClick(genre.code)}
+              className={
+                "shrink-0 rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line transition-colors " +
+                "md:[writing-mode:vertical-rl] md:[text-orientation:upright] md:h-36 md:min-w-[3.25rem] " +
+                (selectedGenre === genre.code
+                  ? "bg-white text-red-600 border-red-600"
+                  : "bg-red-600 text-white border-red-600") +
+                (!canUseGenreTabs ? " opacity-50 cursor-not-allowed" : "")
+              }
+            >
+              {splitGenreLabel(genre.name)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {validationMessage && (
