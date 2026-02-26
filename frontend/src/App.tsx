@@ -69,11 +69,12 @@ function App() {
     // 最小高さを画面全体に、背景色をグレーに設定
     <div className="min-h-screen bg-gray-100">
       {/* ヘッダー部分：青い背景で影付き */}
-      <header className="bg-blue-600 text-white py-6 shadow-lg">
+      <header className="bg-red-600 text-white py-6 shadow-lg">
         {/* コンテナ：最大幅を設定し、中央揃え */}
         <div className="container mx-auto px-4">
           {/* タイトル：大きな太字で表示 */}
           <h1 className="text-3xl font-bold">ホットペッパー レストラン検索</h1>
+          <p>Powered by ホットペッパーグルメ Webサービス</p>
         </div>
       </header>
 

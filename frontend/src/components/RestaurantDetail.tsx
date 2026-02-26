@@ -75,20 +75,13 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
               <h3 className="text-2xl font-bold text-gray-800 mb-2">
                 {restaurant.name}
               </h3>
-              <p className="text-blue-600 font-medium">
+              <p className="text-red-600 font-medium">
                 {restaurant.genre.name}
               </p>
               <p className="text-sm text-gray-600 mt-1">
                 {restaurant.genre.catch}
               </p>
-            </div>
-
-            {/* キャッチコピーセクション */}
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-1">
-                キャッチコピー
-              </h4>
-              <p className="text-gray-600">{restaurant.catch}</p>
+              <p className="text-sm text-gray-600 mt-1">{restaurant.catch}</p>
             </div>
 
             {/* 住所セクション */}
@@ -103,7 +96,7 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
                 <h4 className="font-semibold text-gray-700 mb-1">
                   現在地からの距離
                 </h4>
-                <p className="text-green-600 font-medium">
+                <p className="text-red-600 font-medium">
                   {formatDistance(
                     calculateDistance(
                       userLat,
@@ -125,14 +118,17 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
             )}
 
             {/* 利用可能クレジットカード */}
-            {creditCardNames.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-gray-700 mb-1">
-                  利用可能クレジットカード
-                </h4>
-                <p className="text-gray-600">{creditCardNames.join(" / ")}</p>
-              </div>
-            )}
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">
+                利用可能クレジットカード
+              </h4>
+              <p className="text-gray-600">
+                {creditCardNames.length > 0
+                  ? creditCardNames.join(" / ")
+                  : "カード情報なし"}
+              </p>
+            </div>
 
             {/* アクセス情報セクション */}
             <div>
@@ -147,7 +143,7 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
                 href={googleMapsUrl} // Googleマップの詳細ページURL
                 target="_blank" // 新しいタブで開く
                 rel="noopener noreferrer" // セキュリティ対策（target="_blank"使用時の推奨設定）
-                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
+                className="inline-block bg-green-600 text-white px-6 py-3 rounded-md hover:bg-yellow-700 transition-colors"
               >
                 Googleマップで場所を見る
               </a>

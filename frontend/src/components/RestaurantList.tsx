@@ -55,54 +55,63 @@ export const RestaurantList: React.FC<RestaurantListProps> = ({
             // hover:shadow-xl: ホバー時に影を強調
             className="bg-white shadow-md rounded-lg overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
           >
-            {/* レストランの画像 */}
-            <img
-              src={restaurant.photo.pc.m} // 中サイズの画像URL
-              alt={restaurant.name} // 代替テキスト（アクセシビリティ）
-              // object-cover: 画像をコンテナに合わせてトリミング
-              className="w-full h-48 object-cover"
-            />
-            {/* カードのコンテンツ部分 */}
-            <div className="p-4">
-              {/* レストラン名 */}
-              <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">
-                {/* truncate: テキストが長い場合は省略記号(...)を表示 */}
-                {restaurant.name}
-              </h3>
-              {/* ジャンル名 */}
-              <p className="text-sm text-blue-600 mb-2">
-                {restaurant.genre.name}
-              </p>
-              {/* キャッチコピー */}
-              <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                {/* line-clamp-2: テキストを2行までに制限し、それ以上は省略 */}
-                {restaurant.catch}
-              </p>
-              {/* アクセス */}
-              <p className="text-xs text-gray-500 truncate">
-                アクセス：{restaurant.access}
-              </p>
-              {/* 現在地からの距離 */}
-              {userLat !== undefined && userLng !== undefined && (
-                <p className="text-xs text-green-600 font-medium mt-1">
-                  📍ここから
-                  {formatDistance(
-                    calculateDistance(
-                      userLat,
-                      userLng,
-                      restaurant.lat,
-                      restaurant.lng,
-                    ),
-                  )}
+            {/* 写真とテキストを横並びにするフレックスコンテナ */}
+            <div className="flex">
+              {/* レストランの画像 */}
+              <img
+                src={restaurant.photo.pc.l} // 大サイズの画像URL
+                alt={restaurant.name} // 代替テキスト（アクセシビリティ）
+                // object-cover: 画像をコンテナに合わせてトリミング
+                className="w-30 h-30 object-cover flex-shrink-0"
+              />
+              {/* カードのコンテンツ部分 */}
+              <div className="p-4 flex-1">
+                {/* レストラン名 */}
+                <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">
+                  {/* truncate: テキストが長い場合は省略記号(...)を表示 */}
+                  {restaurant.name}
+                </h3>
+                <div className="text-sm text-gray-600 mb-2">
+                  {/* ジャンル名 */}
+                  <p className="text-sm text-red-600">
+                    {restaurant.genre.name}
+                  </p>
+                  {/* キャッチコピー */}
+                  <p className="text-xs text-gray-500 truncate">
+                    {restaurant.genre.catch}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {/* line-clamp-2: テキストを2行までに制限し、それ以上は省略 */}
+                    {restaurant.catch}
+                  </p>
+                </div>
+                {/* アクセス */}
+                <p className="text-sm text-gray-600 mb-2">
+                  アクセス：{restaurant.access}
                 </p>
-              )}
-              {/* 利用可能クレジットカード */}
-              {creditCardNames.length > 0 && (
-                <p className="text-xs text-emerald-700 mt-2 line-clamp-2">
-                  カード：{creditCardNames.join(" / ")}
+                {/* 現在地からの距離 */}
+                {userLat !== undefined && userLng !== undefined && (
+                  <p className="text-sm text-red-500 font-medium mt-1">
+                    📍ここから
+                    {formatDistance(
+                      calculateDistance(
+                        userLat,
+                        userLng,
+                        restaurant.lat,
+                        restaurant.lng,
+                      ),
+                    )}
+                  </p>
+                )}
+                {/* 利用可能クレジットカード */}
+                <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                  {creditCardNames.length > 0
+                    ? creditCardNames.join(" / ")
+                    : "カード情報なし"}
                 </p>
-              )}
+              </div>
             </div>
+            {/* フレックスコンテナの終了 */}
           </div>
         );
       })}

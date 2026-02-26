@@ -84,7 +84,8 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   });
 
   const getStoredLocation = useCallback((): StoredLocation | null => {
-    const savedLocation = storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    const savedLocation =
+      storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
     return isStoredLocation(savedLocation) ? savedLocation : null;
   }, []);
 
@@ -128,7 +129,8 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     [onLocationChange],
   );
 
-  const hasLocationContext = hasStoredLocation || (lat !== null && lng !== null);
+  const hasLocationContext =
+    hasStoredLocation || (lat !== null && lng !== null);
   const hasSearchText = address.trim() !== "" || keyword.trim() !== "";
   const canUseGenreTabs =
     hasSearched &&
@@ -196,7 +198,8 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 
     const hasExpiredSavedLocation =
       locationFromStorage !== null &&
-      Date.now() - locationFromStorage.timestamp >= LOCATION_REFRESH_INTERVAL_MS;
+      Date.now() - locationFromStorage.timestamp >=
+        LOCATION_REFRESH_INTERVAL_MS;
     const supportsPermissionQuery =
       typeof navigator.permissions?.query === "function";
 
@@ -339,6 +342,28 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         />
       </div>
 
+      {validationMessage && (
+        <p
+          className="mb-4 text-sm text-red-600"
+          role="alert"
+          aria-live="polite"
+        >
+          {validationMessage}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+      >
+        {isLoading
+          ? "検索中..."
+          : hasStoredLocation
+            ? "検索（距離順）"
+            : "検索（おススメ順）"}
+      </button>
+
       {hasSearched && (
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -392,28 +417,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           </div>
         </div>
       )}
-
-      {validationMessage && (
-        <p
-          className="mb-4 text-sm text-red-600"
-          role="alert"
-          aria-live="polite"
-        >
-          {validationMessage}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-      >
-        {isLoading
-          ? "検索中..."
-          : hasStoredLocation
-            ? "検索（距離順）"
-            : "検索（おススメ順）"}
-      </button>
     </form>
   );
 };
