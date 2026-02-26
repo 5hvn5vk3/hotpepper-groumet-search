@@ -123,7 +123,7 @@ function App() {
     // 最小高さを画面全体に、背景色をグレーに設定
     <div className="min-h-screen bg-gray-100">
       {/* ヘッダー部分：青い背景で影付き */}
-      <header className="bg-red-600 text-white py-6 shadow-lg">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-red-600 text-white py-6 shadow-lg">
         {/* コンテナ：最大幅を設定し、中央揃え */}
         <div className="container mx-auto px-4">
           {/* タイトル：大きな太字で表示 */}
@@ -133,7 +133,7 @@ function App() {
       </header>
 
       {/* メインコンテンツエリア */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 pt-36 pb-8">
         {/* 検索フォームコンポーネント
             onSearch: 検索実行時のコールバック関数
             isLoading: ローディング中は検索ボタンを無効化 */}
