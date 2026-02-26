@@ -14,7 +14,7 @@ const getTabClassName = (
   isSelected: boolean,
   canUseGenreTabs: boolean,
 ): string =>
-  "shrink-0 flex items-center justify-center rounded-md border px-3 py-2 text-[10px] font-bold leading-tight whitespace-pre-line text-center transition-colors " +
+  "shrink-0 md:shrink flex items-center justify-center rounded-md border px-3 py-2 text-[10px] font-bold leading-tight whitespace-pre-line text-left transition-colors " +
   (isSelected
     ? "bg-white text-red-600 border-red-600"
     : "bg-red-600 text-white border-red-600") +
