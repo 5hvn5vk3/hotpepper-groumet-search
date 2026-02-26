@@ -35,7 +35,7 @@ paths:
         - `keyword`
         バックエンドは常に以下のパラメータをホットペッパーAPIに付与します：
         - `format=json`: JSON形式でレスポンスを取得
-        - `type=lite`: 軽量版のレスポンス形式を使用
+        - `type=lite+credit_card`: 軽量版 + クレジットカード情報を含むレスポンス形式を使用
       operationId: searchRestaurants
       parameters:
         - name: lat
@@ -134,6 +134,11 @@ paths:
                           l: "https://imgfp.hotp.jp/.../large.jpg"
                           m: "https://imgfp.hotp.jp/.../medium.jpg"
                           s: "https://imgfp.hotp.jp/.../small.jpg"
+                      credit_card:
+                        - code: "VISA"
+                          name: "VISA"
+                        - code: "MASTER"
+                          name: "MasterCard"
         '400':
           description: リクエストパラメータエラー
           content:
@@ -293,6 +298,20 @@ components:
                   format: uri
                   description: 小サイズ画像URL
                   example: "https://imgfp.hotp.jp/.../small.jpg"
+        credit_card:
+          type: array
+          description: 利用可能なクレジットカード情報
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                description: カードコード
+                example: "VISA"
+              name:
+                type: string
+                description: カード名
+                example: "VISA"
 
     GenreMasterResponse:
       type: object

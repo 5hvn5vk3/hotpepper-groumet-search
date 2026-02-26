@@ -48,6 +48,10 @@ describe("RestaurantList", () => {
           s: "https://example.com/photo_s.jpg",
         },
       },
+      credit_card: [
+        { code: "VISA", name: "VISA" },
+        { code: "MASTER", name: "MasterCard" },
+      ],
     },
     {
       id: "J001234568",
@@ -119,13 +123,14 @@ describe("RestaurantList", () => {
     expect(screen.getByText("テスト居酒屋")).toBeInTheDocument();
     expect(screen.getByText("居酒屋")).toBeInTheDocument();
     expect(screen.getByText("美味しい料理とお酒")).toBeInTheDocument();
-    expect(screen.getByText("渋谷駅徒歩5分")).toBeInTheDocument();
+    expect(screen.getByText("アクセス：渋谷駅徒歩5分")).toBeInTheDocument();
+    expect(screen.getByText("カード：VISA / MasterCard")).toBeInTheDocument();
 
     // 2件目のレストラン
     expect(screen.getByText("イタリアンレストラン")).toBeInTheDocument();
     expect(screen.getByText("イタリアン")).toBeInTheDocument();
     expect(screen.getByText("本場の味を堪能")).toBeInTheDocument();
-    expect(screen.getByText("新宿駅徒歩3分")).toBeInTheDocument();
+    expect(screen.getByText("アクセス：新宿駅徒歩3分")).toBeInTheDocument();
 
     // 画像が2枚表示されていることを確認
     const images = screen.getAllByRole("img");

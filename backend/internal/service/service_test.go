@@ -142,6 +142,7 @@ func TestSearchGourmet(t *testing.T) {
 			},
 			mockResponse: `{"results": {"shop": []}}`,
 			expectedInURL: []string{
+				"type=lite%2Bcredit_card",
 				"keyword=%E5%B1%85%E9%85%92%E5%B1%8B",
 				"start=1",
 				"count=20",
@@ -161,6 +162,7 @@ func TestSearchGourmet(t *testing.T) {
 			},
 			mockResponse: `{"results": {"shop": []}}`,
 			expectedInURL: []string{
+				"type=lite%2Bcredit_card",
 				"lat=35.68",
 				"lng=139.76",
 				"range=3",
@@ -185,6 +187,7 @@ func TestSearchGourmet(t *testing.T) {
 			},
 			mockResponse: `{"results": {"shop": []}}`,
 			expectedInURL: []string{
+				"type=lite%2Bcredit_card",
 				"genre=G001",
 				"lat=35.68",
 				"lng=139.76",

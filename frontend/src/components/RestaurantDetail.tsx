@@ -24,6 +24,13 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
     `${restaurant.name} ${restaurant.address}`,
   );
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+  const creditCardNames = Array.from(
+    new Set(
+      (restaurant.credit_card ?? [])
+        .map((card) => card.name?.trim())
+        .filter((name): name is string => Boolean(name)),
+    ),
+  );
 
   return (
     // モーダルのオーバーレイ（背景）
@@ -114,6 +121,16 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
               <div>
                 <h4 className="font-semibold text-gray-700 mb-1">営業時間</h4>
                 <p className="text-gray-600">{restaurant.open}</p>
+              </div>
+            )}
+
+            {/* 利用可能クレジットカード */}
+            {creditCardNames.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-1">
+                  利用可能クレジットカード
+                </h4>
+                <p className="text-gray-600">{creditCardNames.join(" / ")}</p>
               </div>
             )}
 

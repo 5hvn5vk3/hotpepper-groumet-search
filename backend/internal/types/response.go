@@ -43,6 +43,8 @@ type Shop struct {
 	URLs ShopURLs `json:"urls"`
 	// 写真情報
 	Photo ShopPhoto `json:"photo"`
+	// クレジットカード情報（type=credit_card 追加時）
+	CreditCard []ShopCreditCard `json:"credit_card"`
 }
 
 // ShopGenre は店舗のジャンル情報を表す構造体
@@ -73,6 +75,14 @@ type ShopPhotoPC struct {
 	M string `json:"m"`
 	// 小サイズ画像URL
 	S string `json:"s"`
+}
+
+// ShopCreditCard は利用可能なクレジットカード情報を表す構造体
+type ShopCreditCard struct {
+	// カードコード
+	Code string `json:"code"`
+	// カード名
+	Name string `json:"name"`
 }
 
 // GenreMasterResponse はジャンルマスタAPIのレスポンス全体を表す構造体

@@ -42,8 +42,8 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 	queryParams := url.Values{}
 
 	// 共通パラメータの設定
-	queryParams.Set("key", s.apiKey) // APIキー
-	queryParams.Set("type", "lite")  // レスポンスタイプ（軽量版）
+	queryParams.Set("key", s.apiKey)            // APIキー
+	queryParams.Set("type", "lite+credit_card") // レスポンスタイプ（軽量版 + カード情報）
 	queryParams.Set("format", "json")
 
 	// 緯度経度による検索が指定されていればlat/lng/rangeを使用する

@@ -1,3 +1,8 @@
+export interface ShopCreditCard {
+  code: string;
+  name: string;
+}
+
 export interface Shop {
   id: string;
   name: string;
@@ -22,6 +27,8 @@ export interface Shop {
       s: string;
     };
   };
+  // type=lite+credit_card で追加される利用可能カード情報
+  credit_card?: ShopCreditCard[];
 }
 
 export interface GourmetSearchResponse {
