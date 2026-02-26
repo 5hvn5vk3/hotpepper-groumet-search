@@ -22,7 +22,7 @@ export interface Shop {
   open?: string;
   // 定休日・営業時間補足
   close?: string;
-  // 予算メモ
+  // 料金備考
   budget_memo?: string;
   // 設備・条件
   wifi?: string;

@@ -104,12 +104,6 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
               <p className="text-sm text-gray-600 mt-1">{restaurant.catch}</p>
             </div>
 
-            {/* 住所セクション */}
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-1">住所</h4>
-              <p className="text-gray-600">{restaurant.address}</p>
-            </div>
-
             {/* 現在地からの距離セクション */}
             {userLat !== undefined && userLng !== undefined && (
               <div>
@@ -129,21 +123,76 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
               </div>
             )}
 
+            {/* 外部リンクボタン */}
+            <div className="flex flex-wrap gap-4 mt-4">
+              <div className="pt-4">
+                {/* a要素: Googleマップの詳細ページへのリンク */}
+                <a
+                  href={googleMapsUrl} // Googleマップの詳細ページURL
+                  target="_blank" // 新しいタブで開く
+                  rel="noopener noreferrer" // セキュリティ対策（target="_blank"使用時の推奨設定）
+                  className="inline-block bg-green-600 text-white px-6 py-3 rounded-md hover:bg-yellow-700 transition-colors"
+                >
+                  Googleマップで場所を見る
+                </a>
+              </div>
+
+              <div className="pt-4">
+                {/* a要素: ホットペッパーの詳細ページへのリンク */}
+                <a
+                  href={restaurant.urls.pc} // レストランの詳細ページURL
+                  target="_blank" // 新しいタブで開く
+                  rel="noopener noreferrer" // セキュリティ対策（target="_blank"使用時の推奨設定）
+                  className="inline-block bg-red-600 text-white px-6 py-3 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  ホットペッパーで詳細を見る
+                </a>
+              </div>
+            </div>
+
+            {/* アクセス情報セクション */}
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">アクセス</h4>
+              <p className="text-gray-600">{restaurant.access}</p>
+            </div>
+
+            {/* 住所セクション */}
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">住所</h4>
+              <p className="text-gray-600">{restaurant.address}</p>
+            </div>
+
             {/* 営業時間 */}
             <div>
               <h4 className="font-semibold text-gray-700 mb-1">営業時間</h4>
-              <p className="text-gray-600">{renderDeferredValue(restaurant.open)}</p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-1">定休日・補足</h4>
-              <p className="text-gray-600">{renderDeferredValue(restaurant.close)}</p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-1">予算メモ</h4>
               <p className="text-gray-600">
-                {renderDeferredValue(restaurant.budget_memo)}
+                {renderDeferredValue(restaurant.open)}
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">定休日</h4>
+              <p className="text-gray-600">
+                {renderDeferredValue(restaurant.close)}
+              </p>
+            </div>
+
+            {restaurant.budget_memo && (
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-1">料金備考</h4>
+                <p className="text-gray-600">{restaurant.budget_memo}</p>
+              </div>
+            )}
+
+            {/* 利用可能クレジットカード */}
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">
+                利用可能クレジットカード
+              </h4>
+              <p className="text-gray-600">
+                {creditCardNames.length > 0
+                  ? creditCardNames.join(" / ")
+                  : "カード情報なし"}
               </p>
             </div>
 
@@ -169,56 +218,12 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
               </p>
             </div>
 
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-1">店舗詳細メモ</h4>
-              <p className="text-gray-600">
-                {renderDeferredValue(restaurant.shop_detail_memo)}
-              </p>
-            </div>
-
-            {/* 利用可能クレジットカード */}
-
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-1">
-                利用可能クレジットカード
-              </h4>
-              <p className="text-gray-600">
-                {creditCardNames.length > 0
-                  ? creditCardNames.join(" / ")
-                  : "カード情報なし"}
-              </p>
-            </div>
-
-            {/* アクセス情報セクション */}
-            <div>
-              <h4 className="font-semibold text-gray-700 mb-1">アクセス</h4>
-              <p className="text-gray-600">{restaurant.access}</p>
-            </div>
-
-            {/* 外部リンクボタン */}
-            <div className="pt-4">
-              {/* a要素: Googleマップの詳細ページへのリンク */}
-              <a
-                href={googleMapsUrl} // Googleマップの詳細ページURL
-                target="_blank" // 新しいタブで開く
-                rel="noopener noreferrer" // セキュリティ対策（target="_blank"使用時の推奨設定）
-                className="inline-block bg-green-600 text-white px-6 py-3 rounded-md hover:bg-yellow-700 transition-colors"
-              >
-                Googleマップで場所を見る
-              </a>
-            </div>
-
-            <div className="pt-4">
-              {/* a要素: ホットペッパーの詳細ページへのリンク */}
-              <a
-                href={restaurant.urls.pc} // レストランの詳細ページURL
-                target="_blank" // 新しいタブで開く
-                rel="noopener noreferrer" // セキュリティ対策（target="_blank"使用時の推奨設定）
-                className="inline-block bg-red-600 text-white px-6 py-3 rounded-md hover:bg-red-700 transition-colors"
-              >
-                ホットペッパーで詳細を見る
-              </a>
-            </div>
+            {restaurant.shop_detail_memo && (
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-1">備考</h4>
+                <p className="text-gray-600">{restaurant.shop_detail_memo}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
