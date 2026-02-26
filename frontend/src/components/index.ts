@@ -1,4 +1,5 @@
 export { ErrorMessage } from "./ErrorMessage";
+export { GenreTabs } from "./GenreTabs";
 export { LoadingSpinner } from "./LoadingSpinner";
 export { Pagination } from "./Pagination";
 export { RestaurantDetail } from "./RestaurantDetail";

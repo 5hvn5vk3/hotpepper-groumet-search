@@ -5,6 +5,7 @@ import type { GourmetSearchParams } from "@/types";
 // ジャンルデータを取得するカスタムフックをインポート
 import { useGenres } from "@/hooks/useGenres";
 import { storageService } from "@/services/storageService";
+import { GenreTabs } from "./GenreTabs";
 import { SearchTextField } from "./SearchTextField";
 
 // SearchFormコンポーネントのProps（プロパティ）の型定義
@@ -38,8 +39,6 @@ const isStoredLocation = (value: unknown): value is StoredLocation => {
     Number.isFinite(candidate.timestamp)
   );
 };
-
-const splitGenreLabel = (label: string): string => label.replace(/・/g, "\n・");
 
 const isReloadNavigation = (): boolean => {
   if (typeof performance === "undefined") {
@@ -365,55 +364,12 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       </button>
 
       {hasSearched && (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            ジャンル
-          </label>
-          <div
-            role="tablist"
-            aria-label="ジャンルタブ"
-            className="flex items-stretch gap-2 overflow-x-auto pb-2 md:overflow-visible"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={selectedGenre === ""}
-              aria-label="すべて"
-              disabled={!canUseGenreTabs}
-              onClick={() => handleGenreTabClick("")}
-              className={
-                "shrink-0 flex items-center justify-center rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line text-center transition-colors " +
-                (selectedGenre === ""
-                  ? "bg-white text-red-600 border-red-600"
-                  : "bg-red-600 text-white border-red-600") +
-                (!canUseGenreTabs ? " opacity-50 cursor-not-allowed" : "")
-              }
-            >
-              すべて
-            </button>
-
-            {genres.map((genre) => (
-              <button
-                key={genre.code}
-                type="button"
-                role="tab"
-                aria-selected={selectedGenre === genre.code}
-                aria-label={genre.name}
-                disabled={!canUseGenreTabs}
-                onClick={() => handleGenreTabClick(genre.code)}
-                className={
-                  "shrink-0 flex items-center justify-center rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line text-center transition-colors " +
-                  (selectedGenre === genre.code
-                    ? "bg-white text-red-600 border-red-600"
-                    : "bg-red-600 text-white border-red-600") +
-                  (!canUseGenreTabs ? " opacity-50 cursor-not-allowed" : "")
-                }
-              >
-                {splitGenreLabel(genre.name)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <GenreTabs
+          genres={genres}
+          selectedGenre={selectedGenre}
+          canUseGenreTabs={canUseGenreTabs}
+          onGenreTabClick={handleGenreTabClick}
+        />
       )}
     </form>
   );
