@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import type { GourmetSearchParams } from "@/types";
 import { storageService } from "@/services/storageService";
 import { SearchTextField } from "./SearchTextField";
+import { SearchRangeSelect } from "./SearchRangeSelect";
+import { SearchSubmitButton } from "./SearchSubmitButton";
 interface SearchFormProps {
   onSearch: (params: GourmetSearchParams) => void;
   isLoading: boolean;
@@ -247,34 +249,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       <h2 className="text-2xl font-bold mb-4 text-gray-800">レストラン検索</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <div className="mt-2">
-            <label className="block text-sm text-gray-700 mb-1">
-              検索範囲 （現在地から）
-            </label>
-            <select
-              value={range}
-              onChange={(e) => setRange(Number(e.target.value))}
-              className={
-                "w-full px-3 py-2 border border-gray-300 rounded-md" +
-                (hasStoredLocation ? "" : " bg-gray-200")
-              }
-              disabled={!hasStoredLocation}
-            >
-              {hasStoredLocation ? (
-                <>
-                  <option value={1}>300m</option>
-                  <option value={2}>500m</option>
-                  <option value={3}>1000m</option>
-                  <option value={4}>2000m</option>
-                  <option value={5}>3000m</option>
-                </>
-              ) : (
-                <option>位置情報がありません</option>
-              )}
-            </select>
-          </div>
-        </div>
+        <SearchRangeSelect
+          range={range}
+          hasStoredLocation={hasStoredLocation}
+          onChange={setRange}
+        />
 
         <SearchTextField
           label="住所（部分一致）"
@@ -311,17 +290,10 @@ export const SearchForm: React.FC<SearchFormProps> = ({
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-      >
-        {isLoading
-          ? "検索中..."
-          : hasStoredLocation
-            ? "検索（距離順）"
-            : "検索（おススメ順）"}
-      </button>
+      <SearchSubmitButton
+        isLoading={isLoading}
+        hasStoredLocation={hasStoredLocation}
+      />
     </form>
   );
 };
