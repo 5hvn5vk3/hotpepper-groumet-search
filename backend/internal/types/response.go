@@ -33,12 +33,30 @@ type Shop struct {
 	Lng float64 `json:"lng"`
 	// 営業時間（APIからのフィールド名に合わせる）
 	Open string `json:"open"`
+	// 定休日・営業時間補足
+	Close string `json:"close"`
 	// ジャンル情報
 	Genre ShopGenre `json:"genre"`
 	// キャッチコピー
 	Catch string `json:"catch"`
 	// アクセス情報
 	Access string `json:"access"`
+	// 予算メモ
+	BudgetMemo string `json:"budget_memo"`
+	// Wi-Fi
+	Wifi string `json:"wifi"`
+	// 個室
+	PrivateRoom string `json:"private_room"`
+	// 禁煙席
+	NonSmoking string `json:"non_smoking"`
+	// 駐車場
+	Parking string `json:"parking"`
+	// ランチ営業
+	Lunch string `json:"lunch"`
+	// 深夜営業
+	Midnight string `json:"midnight"`
+	// 店舗詳細メモ
+	ShopDetailMemo string `json:"shop_detail_memo"`
 	// URL情報
 	URLs ShopURLs `json:"urls"`
 	// 写真情報

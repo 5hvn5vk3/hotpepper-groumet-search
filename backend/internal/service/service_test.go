@@ -528,3 +528,38 @@ func TestSearchGourmetPagination(t *testing.T) {
 		})
 	}
 }
+
+func TestGetGourmetDetail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+
+		if got := query.Get("id"); got != "J001234567" {
+			t.Errorf("id = %q; want J001234567", got)
+		}
+		if got := query.Get("type"); got != "" {
+			t.Errorf("type should be empty for detail request, got %q", got)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"results":{"shop":[{"id":"J001234567","name":"テスト"}]}}`))
+	}))
+	defer server.Close()
+
+	svc := &HotpepperService{
+		apiKey:  "test-key",
+		baseURL: server.URL,
+	}
+
+	res, err := svc.GetGourmetDetail("J001234567")
+	if err != nil {
+		t.Fatalf("GetGourmetDetail returned error: %v", err)
+	}
+
+	if len(res.Results.Shop) != 1 {
+		t.Fatalf("shop length = %d; want 1", len(res.Results.Shop))
+	}
+	if res.Results.Shop[0].ID != "J001234567" {
+		t.Errorf("shop[0].id = %q; want J001234567", res.Results.Shop[0].ID)
+	}
+}

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { searchRestaurants } from "./restaurantApi";
+import { fetchRestaurantDetail, searchRestaurants } from "./restaurantApi";
 import { apiGet } from "./client";
 import type { GourmetSearchResponse, GourmetSearchParams } from "@/types";
 
@@ -91,5 +91,53 @@ describe("searchRestaurants", () => {
 
     await searchRestaurants({ keyword: "寿司", count: 150 });
     expect(apiGet).toHaveBeenCalledWith(expect.stringContaining("count=100"));
+  });
+});
+
+describe("fetchRestaurantDetail", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("idが空ならAPI呼び出しをスキップしてnullを返す", async () => {
+    const result = await fetchRestaurantDetail(" ");
+    expect(apiGet).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it("id指定で詳細を取得し、先頭のshopを返す", async () => {
+    vi.mocked(apiGet).mockResolvedValue({
+      results: {
+        api_version: "1.0",
+        results_available: 1,
+        results_returned: "1",
+        results_start: 1,
+        shop: [
+          {
+            id: "J001234567",
+            name: "テスト居酒屋",
+            address: "東京都渋谷区",
+            lat: 35.6595,
+            lng: 139.7004,
+            genre: { name: "居酒屋", catch: "気軽に楽しめる" },
+            catch: "美味しい料理とお酒",
+            access: "渋谷駅徒歩5分",
+            urls: { pc: "https://example.com/restaurant1" },
+            photo: {
+              pc: {
+                l: "https://example.com/photo_l.jpg",
+                m: "https://example.com/photo_m.jpg",
+                s: "https://example.com/photo_s.jpg",
+              },
+            },
+          },
+        ],
+      },
+    } as GourmetSearchResponse);
+
+    const result = await fetchRestaurantDetail("J001234567");
+
+    expect(apiGet).toHaveBeenCalledWith(expect.stringContaining("/api/gourmet?id=J001234567"));
+    expect(result?.id).toBe("J001234567");
   });
 });

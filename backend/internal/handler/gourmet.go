@@ -46,19 +46,30 @@ func (h *GourmetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// リクエストからクエリパラメータを取得し、バリデーション（検証）を実行
-	// parseParamsメソッドでパラメータを解析し、GourmetSearchParams構造体に変換
-	params, err := h.parseParams(r)
-	// パラメータの解析でエラーが発生した場合
-	if err != nil {
-		// 400エラー：不正なリクエスト（パラメータが不足または無効）
-		// err.Error()でエラーメッセージを文字列として取得
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	var (
+		response *types.GourmetSearchResponse
+		err      error
+	)
+
+	shopID := strings.TrimSpace(r.URL.Query().Get("id"))
+	if shopID != "" {
+		response, err = h.service.GetGourmetDetail(shopID)
+	} else {
+		// リクエストからクエリパラメータを取得し、バリデーション（検証）を実行
+		// parseParamsメソッドでパラメータを解析し、GourmetSearchParams構造体に変換
+		params, parseErr := h.parseParams(r)
+		// パラメータの解析でエラーが発生した場合
+		if parseErr != nil {
+			// 400エラー：不正なリクエスト（パラメータが不足または無効）
+			// err.Error()でエラーメッセージを文字列として取得
+			http.Error(w, parseErr.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// サービス層のメソッドを呼び出して、ホットペッパーAPIから店舗データを検索
+		response, err = h.service.SearchGourmet(params)
 	}
 
-	// サービス層のメソッドを呼び出して、ホットペッパーAPIから店舗データを検索
-	response, err := h.service.SearchGourmet(params)
 	// API呼び出しでエラーが発生した場合
 	if err != nil {
 		// 500エラー：サーバー内部エラー

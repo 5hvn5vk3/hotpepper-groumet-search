@@ -7,6 +7,7 @@ import (
 	"net/http"      // HTTPクライアント・サーバー機能を提供
 	"net/url"       // URLの解析と構築を提供
 	"strconv"       // 文字列と数値の変換を提供
+	"strings"
 
 	"backend/internal/types" // リクエスト・レスポンスの型定義をインポート
 )
@@ -87,6 +88,33 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 	}
 
 	// JSONをデコードして型付きレスポンスに変換
+	var response types.GourmetSearchResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// GetGourmetDetail は店舗IDを指定してグルメ詳細を取得する（type指定なし）
+func (s *HotpepperService) GetGourmetDetail(id string) (*types.GourmetSearchResponse, error) {
+	shopID := strings.TrimSpace(id)
+	if shopID == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+
+	queryParams := url.Values{}
+	queryParams.Set("key", s.apiKey)
+	queryParams.Set("format", "json")
+	queryParams.Set("id", shopID)
+
+	apiURL := fmt.Sprintf("%s/gourmet/v1/?%s", s.baseURL, queryParams.Encode())
+
+	body, err := s.fetchAPI(apiURL)
+	if err != nil {
+		return nil, err
+	}
+
 	var response types.GourmetSearchResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)

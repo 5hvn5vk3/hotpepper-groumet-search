@@ -9,11 +9,12 @@ import {
   SearchForm, // 検索フォームコンポーネント
 } from "@/components"; // コンポーネントのインデックスから一括インポート
 // TypeScript型定義をインポート
-import type { SearchParams, Shop } from "@/types";
+import type { RestaurantDetailStatus, SearchParams, Shop } from "@/types";
 // カスタムフックをインポート
 import { useRestaurantSearch } from "@/hooks/useRestaurantSearch"; // レストラン検索ロジックを管理
 import { useModal } from "@/hooks/useModal"; // モーダルの開閉を管理
-import { useState } from "react"; // 現在地状態を管理
+import { fetchRestaurantDetail } from "@/api/restaurantApi";
+import { useMemo, useRef, useState } from "react"; // 現在地状態を管理
 // 定数をインポート
 import { ITEMS_PER_PAGE } from "@/constants"; // 1ページあたりの表示件数
 
@@ -39,6 +40,27 @@ function App() {
   // ユーザーの現在地（緯度・経度）の状態
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [detailRestaurant, setDetailRestaurant] = useState<Shop | null>(null);
+  const [detailStatus, setDetailStatus] =
+    useState<RestaurantDetailStatus>("idle");
+  const detailRequestIdRef = useRef(0);
+
+  const modalRestaurant = useMemo(() => {
+    if (!selectedRestaurant) {
+      return null;
+    }
+
+    if (!detailRestaurant) {
+      return selectedRestaurant;
+    }
+
+    return {
+      ...selectedRestaurant,
+      ...detailRestaurant,
+      // credit_cardは初回のlite+credit_cardを保持する
+      credit_card: selectedRestaurant.credit_card,
+    };
+  }, [selectedRestaurant, detailRestaurant]);
 
   // SearchFormから現在地が取得されたときのハンドラー
   const handleLocationChange = (lat: number, lng: number) => {
@@ -59,9 +81,41 @@ function App() {
   };
 
   // レストランカードがクリックされたときのハンドラー関数
-  const handleSelectRestaurant = (restaurant: Shop) => {
+  const handleSelectRestaurant = async (restaurant: Shop) => {
     // モーダルを開き、選択されたレストランのデータを渡す
     open(restaurant);
+    setDetailRestaurant(null);
+    setDetailStatus("loading");
+
+    const requestId = ++detailRequestIdRef.current;
+
+    try {
+      const detail = await fetchRestaurantDetail(restaurant.id);
+      if (detailRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      if (!detail) {
+        setDetailStatus("failed");
+        return;
+      }
+
+      setDetailRestaurant(detail);
+      setDetailStatus("ready");
+    } catch (detailError) {
+      if (detailRequestIdRef.current === requestId) {
+        setDetailStatus("failed");
+      }
+      console.error("Failed to fetch restaurant detail:", detailError);
+    }
+  };
+
+  const handleCloseRestaurantDetail = () => {
+    // 進行中のレスポンスを無効化
+    detailRequestIdRef.current += 1;
+    setDetailRestaurant(null);
+    setDetailStatus("idle");
+    close();
   };
 
   // JSXを返す：画面に表示するHTML風の構造
@@ -125,10 +179,11 @@ function App() {
       </main>
 
       {/* モーダルが開いており、かつレストランが選択されている場合、詳細画面を表示 */}
-      {isOpen && selectedRestaurant && (
+      {isOpen && modalRestaurant && (
         <RestaurantDetail
-          restaurant={selectedRestaurant}
-          onClose={close}
+          restaurant={modalRestaurant}
+          detailStatus={detailStatus}
+          onClose={handleCloseRestaurantDetail}
           userLat={userLat ?? undefined}
           userLng={userLng ?? undefined}
         />

@@ -20,6 +20,19 @@ export interface Shop {
   };
   // 営業時間
   open?: string;
+  // 定休日・営業時間補足
+  close?: string;
+  // 予算メモ
+  budget_memo?: string;
+  // 設備・条件
+  wifi?: string;
+  private_room?: string;
+  non_smoking?: string;
+  parking?: string;
+  lunch?: string;
+  midnight?: string;
+  // 店舗説明
+  shop_detail_memo?: string;
   photo: {
     pc: {
       l: string;
@@ -30,6 +43,8 @@ export interface Shop {
   // type=lite+credit_card で追加される利用可能カード情報
   credit_card?: ShopCreditCard[];
 }
+
+export type RestaurantDetailStatus = "idle" | "loading" | "ready" | "failed";
 
 export interface GourmetSearchResponse {
   results: {

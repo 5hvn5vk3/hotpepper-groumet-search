@@ -1,13 +1,14 @@
 // Reactライブラリをインポート
 import React from "react";
 // Shop型の定義をインポート
-import type { Shop } from "@/types";
+import type { RestaurantDetailStatus, Shop } from "@/types";
 // 距離計算ユーティリティをインポート
 import { calculateDistance, formatDistance } from "@/utils/distance";
 
 // RestaurantDetailコンポーネントのPropsの型定義
 interface RestaurantDetailProps {
   restaurant: Shop; // 表示するレストランのデータ
+  detailStatus: RestaurantDetailStatus; // 詳細情報の取得状態
   onClose: () => void; // モーダルを閉じるためのコールバック関数
   userLat?: number; // ユーザーの緯度（現在地）
   userLng?: number; // ユーザーの経度（現在地）
@@ -16,6 +17,7 @@ interface RestaurantDetailProps {
 // RestaurantDetailコンポーネント：レストランの詳細情報をモーダルで表示
 export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
   restaurant,
+  detailStatus,
   onClose,
   userLat,
   userLng,
@@ -31,6 +33,18 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
         .filter((name): name is string => Boolean(name)),
     ),
   );
+
+  const renderDeferredValue = (value?: string) => {
+    if (detailStatus === "loading") {
+      return "通信中";
+    }
+
+    if (detailStatus === "failed") {
+      return "取得失敗";
+    }
+
+    return value?.trim() ? value : "情報なし";
+  };
 
   return (
     // モーダルのオーバーレイ（背景）
@@ -70,6 +84,12 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
           {/* 詳細情報のセクション */}
           {/* space-y-4: 子要素間に縦方向のスペースを追加 */}
           <div className="space-y-4">
+            {detailStatus === "loading" && (
+              <p className="text-sm text-blue-600">
+                詳細情報を取得中です。未取得項目は「通信中」と表示しています。
+              </p>
+            )}
+
             {/* レストラン名とジャンル情報 */}
             <div>
               <h3 className="text-2xl font-bold text-gray-800 mb-2">
@@ -110,12 +130,51 @@ export const RestaurantDetail: React.FC<RestaurantDetailProps> = ({
             )}
 
             {/* 営業時間 */}
-            {restaurant.open && (
-              <div>
-                <h4 className="font-semibold text-gray-700 mb-1">営業時間</h4>
-                <p className="text-gray-600">{restaurant.open}</p>
-              </div>
-            )}
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">営業時間</h4>
+              <p className="text-gray-600">{renderDeferredValue(restaurant.open)}</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">定休日・補足</h4>
+              <p className="text-gray-600">{renderDeferredValue(restaurant.close)}</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">予算メモ</h4>
+              <p className="text-gray-600">
+                {renderDeferredValue(restaurant.budget_memo)}
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">設備・条件</h4>
+              <p className="text-gray-600">
+                Wi-Fi: {renderDeferredValue(restaurant.wifi)}
+              </p>
+              <p className="text-gray-600">
+                個室: {renderDeferredValue(restaurant.private_room)}
+              </p>
+              <p className="text-gray-600">
+                禁煙席: {renderDeferredValue(restaurant.non_smoking)}
+              </p>
+              <p className="text-gray-600">
+                駐車場: {renderDeferredValue(restaurant.parking)}
+              </p>
+              <p className="text-gray-600">
+                ランチ: {renderDeferredValue(restaurant.lunch)}
+              </p>
+              <p className="text-gray-600">
+                深夜営業: {renderDeferredValue(restaurant.midnight)}
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-1">店舗詳細メモ</h4>
+              <p className="text-gray-600">
+                {renderDeferredValue(restaurant.shop_detail_memo)}
+              </p>
+            </div>
 
             {/* 利用可能クレジットカード */}
 

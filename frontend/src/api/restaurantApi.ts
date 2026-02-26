@@ -1,5 +1,5 @@
 // 型定義をインポート
-import type { GourmetSearchResponse, GourmetSearchParams } from "@/types";
+import type { GourmetSearchResponse, GourmetSearchParams, Shop } from "@/types";
 // API関数をインポート
 import { apiGet } from "@/api/client";
 
@@ -73,4 +73,16 @@ export const searchRestaurants = async (
   // テンプレートリテラルでURLを構築：/api/gourmet?パラメータ
   // GourmetSearchResponse型でレスポンスの型を指定
   return apiGet<GourmetSearchResponse>(`/api/gourmet?${queryParams}`);
+};
+
+// fetchRestaurantDetail関数：店舗IDから詳細情報を取得（type指定なし）
+export const fetchRestaurantDetail = async (id: string): Promise<Shop | null> => {
+  const shopID = id.trim();
+  if (shopID === "") {
+    return null;
+  }
+
+  const queryParams = new URLSearchParams({ id: shopID });
+  const response = await apiGet<GourmetSearchResponse>(`/api/gourmet?${queryParams}`);
+  return response.results.shop[0] ?? null;
 };
