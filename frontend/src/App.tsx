@@ -3,6 +3,7 @@
 import {
   AppHeader,
   ErrorMessage, // エラーメッセージ表示コンポーネント
+  GenreTabs,
   LoadingSpinner, // ローディング表示コンポーネント
   Pagination, // ページネーションコンポーネント
   RestaurantDetail, // レストラン詳細モーダルコンポーネント
@@ -12,10 +13,12 @@ import {
 // TypeScript型定義をインポート
 import type { RestaurantDetailStatus, SearchParams, Shop } from "@/types";
 // カスタムフックをインポート
+import { useGenres } from "@/hooks/useGenres";
 import { useRestaurantSearch } from "@/hooks/useRestaurantSearch"; // レストラン検索ロジックを管理
 import { useModal } from "@/hooks/useModal"; // モーダルの開閉を管理
 import { fetchRestaurantDetail } from "@/api/restaurantApi";
-import { useMemo, useRef, useState } from "react"; // 現在地状態を管理
+import type { SearchFormState } from "@/components/SearchForm";
+import { useCallback, useMemo, useRef, useState } from "react"; // 現在地状態を管理
 // 定数をインポート
 import { ITEMS_PER_PAGE } from "@/constants"; // 1ページあたりの表示件数
 
@@ -41,10 +44,20 @@ function App() {
   // ユーザーの現在地（緯度・経度）の状態
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [selectedGenre, setSelectedGenre] = useState("");
+  const [searchFormState, setSearchFormState] = useState<SearchFormState>({
+    address: "",
+    keyword: "",
+    lat: null,
+    lng: null,
+    range: 3,
+    hasStoredLocation: false,
+  });
   const [detailRestaurant, setDetailRestaurant] = useState<Shop | null>(null);
   const [detailStatus, setDetailStatus] =
     useState<RestaurantDetailStatus>("idle");
   const detailRequestIdRef = useRef(0);
+  const { genres, isLoading: genresLoading } = useGenres();
 
   const modalRestaurant = useMemo(() => {
     if (!selectedRestaurant) {
@@ -71,8 +84,64 @@ function App() {
 
   // 検索フォームから検索が実行されたときのハンドラー関数
   const handleSearch = (params: SearchParams) => {
+    setSelectedGenre(params.genre ?? "");
     // searchフックの関数を呼び出して検索を実行
     search(params);
+  };
+
+  const handleSearchFormStateChange = useCallback(
+    (nextState: SearchFormState) => {
+      setSearchFormState((prevState) => {
+        const isUnchanged =
+          prevState.address === nextState.address &&
+          prevState.keyword === nextState.keyword &&
+          prevState.lat === nextState.lat &&
+          prevState.lng === nextState.lng &&
+          prevState.range === nextState.range &&
+          prevState.hasStoredLocation === nextState.hasStoredLocation;
+
+        return isUnchanged ? prevState : nextState;
+      });
+    },
+    [],
+  );
+
+  const hasLocationContext =
+    searchFormState.hasStoredLocation ||
+    (searchFormState.lat !== null && searchFormState.lng !== null);
+  const hasSearchText =
+    searchFormState.address.trim() !== "" ||
+    searchFormState.keyword.trim() !== "";
+  const canUseGenreTabs =
+    hasSearched &&
+    !isLoading &&
+    !genresLoading &&
+    (hasLocationContext || hasSearchText);
+
+  const handleGenreTabClick = (genreCode: string) => {
+    if (!canUseGenreTabs || selectedGenre === genreCode) {
+      return;
+    }
+
+    const trimmedAddress = searchFormState.address.trim();
+    const trimmedKeyword = searchFormState.keyword.trim();
+    const hasLocation =
+      searchFormState.lat !== null && searchFormState.lng !== null;
+    const hasAddress = trimmedAddress !== "";
+    const hasKeyword = trimmedKeyword !== "";
+
+    if (!hasLocation && !hasAddress && !hasKeyword) {
+      return;
+    }
+
+    handleSearch({
+      address: hasAddress ? trimmedAddress : undefined,
+      genre: genreCode || undefined,
+      keyword: hasKeyword ? trimmedKeyword : undefined,
+      lat: hasLocation ? searchFormState.lat! : undefined,
+      lng: hasLocation ? searchFormState.lng! : undefined,
+      range: hasLocation ? searchFormState.range : undefined,
+    });
   };
 
   // ページ変更ボタンがクリックされたときのハンドラー関数
@@ -134,9 +203,21 @@ function App() {
         <SearchForm
           onSearch={handleSearch}
           isLoading={isLoading}
-          hasSearched={hasSearched}
+          selectedGenre={selectedGenre}
           onLocationChange={handleLocationChange}
+          onSearchStateChange={handleSearchFormStateChange}
         />
+
+        {hasSearched && (
+          <div className="sticky top-0 z-20 mb-6 rounded-lg bg-gray-100/95 py-2 backdrop-blur-sm">
+            <GenreTabs
+              genres={genres}
+              selectedGenre={selectedGenre}
+              canUseGenreTabs={canUseGenreTabs}
+              onGenreTabClick={handleGenreTabClick}
+            />
+          </div>
+        )}
 
         {/* 条件付きレンダリング：エラーがある場合のみ表示
             &&演算子は左側がtrueの場合に右側を評価・レンダリング */}

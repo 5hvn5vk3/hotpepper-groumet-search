@@ -8,14 +8,6 @@ import {
 } from "@testing-library/react";
 
 import { SearchForm } from "./SearchForm";
-import * as useGenresHook from "@/hooks/useGenres";
-
-vi.mock("@/hooks/useGenres");
-
-const mockGenres = [
-  { code: "G001", name: "居酒屋" },
-  { code: "G002", name: "イタリアン" },
-];
 const LOCATION_STORAGE_KEY = "searchCurrentLocation";
 const LOCATION_REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
@@ -50,12 +42,6 @@ describe("SearchForm", () => {
         return [];
       },
     );
-
-    vi.spyOn(useGenresHook, "useGenres").mockReturnValue({
-      genres: mockGenres,
-      isLoading: false,
-      error: null,
-    });
   });
 
   it("位置情報・住所・キーワードが全て未入力なら画面内エラーを表示して送信しない", () => {
@@ -304,86 +290,27 @@ describe("SearchForm", () => {
     expect(searchButton).toBeDisabled();
   });
 
-  it("検索実行前はジャンルタブを表示しない", () => {
-    render(<SearchForm onSearch={mockOnSearch as any} isLoading={false} />);
-
-    expect(screen.queryByRole("tablist", { name: "ジャンルタブ" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "すべて" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "居酒屋" })).not.toBeInTheDocument();
-  });
-
-  it("ジャンルタブ切替時は位置情報と現在入力中の住所・キーワードで検索する", () => {
-    sessionStorage.setItem(
-      LOCATION_STORAGE_KEY,
-      JSON.stringify({
-        lat: 35.1,
-        lng: 139.1,
-        timestamp: 1700000000000,
-      }),
-    );
-
+  it("selectedGenreが指定されている場合は検索パラメータに反映する", () => {
     render(
       <SearchForm
         onSearch={mockOnSearch as any}
         isLoading={false}
-        hasSearched={true}
+        selectedGenre="G001"
       />,
     );
 
     fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
-      target: { value: "入力中住所" },
+      target: { value: "梅田" },
     });
-    fireEvent.change(screen.getByPlaceholderText("例: 個室"), {
-      target: { value: "入力中キーワード" },
-    });
-
-    fireEvent.click(screen.getByRole("tab", { name: "居酒屋" }));
+    fireEvent.click(screen.getByRole("button", { name: "検索（おススメ順）" }));
 
     expect(mockOnSearch).toHaveBeenCalledWith({
-      address: "入力中住所",
+      address: "梅田",
       genre: "G001",
-      keyword: "入力中キーワード",
-      lat: 35.1,
-      lng: 139.1,
-      range: 3,
-    });
-  });
-
-  it("ジャンルタブの『すべて』選択時はgenreをundefinedで検索する", () => {
-    sessionStorage.setItem(
-      LOCATION_STORAGE_KEY,
-      JSON.stringify({
-        lat: 35.1,
-        lng: 139.1,
-        timestamp: 1700000000000,
-      }),
-    );
-
-    render(
-      <SearchForm
-        onSearch={mockOnSearch as any}
-        isLoading={false}
-        hasSearched={true}
-      />,
-    );
-
-    fireEvent.change(screen.getByPlaceholderText("例: 新宿"), {
-      target: { value: "入力中住所" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("例: 個室"), {
-      target: { value: "入力中キーワード" },
-    });
-
-    fireEvent.click(screen.getByRole("tab", { name: "居酒屋" }));
-    fireEvent.click(screen.getByRole("tab", { name: "すべて" }));
-
-    expect(mockOnSearch).toHaveBeenNthCalledWith(2, {
-      address: "入力中住所",
-      genre: undefined,
-      keyword: "入力中キーワード",
-      lat: 35.1,
-      lng: 139.1,
-      range: 3,
+      keyword: undefined,
+      lat: undefined,
+      lng: undefined,
+      range: undefined,
     });
   });
 

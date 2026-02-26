@@ -2,18 +2,16 @@
 import React, { useCallback, useEffect, useState } from "react";
 // 型定義をインポート
 import type { GourmetSearchParams } from "@/types";
-// ジャンルデータを取得するカスタムフックをインポート
-import { useGenres } from "@/hooks/useGenres";
 import { storageService } from "@/services/storageService";
-import { GenreTabs } from "./GenreTabs";
 import { SearchTextField } from "./SearchTextField";
 
 // SearchFormコンポーネントのProps（プロパティ）の型定義
 interface SearchFormProps {
   onSearch: (params: GourmetSearchParams) => void; // 検索実行時のコールバック関数
   isLoading: boolean; // ローディング中かどうか
-  hasSearched?: boolean; // 検索実行済みかどうか
+  selectedGenre?: string; // 現在選択中のジャンル
   onLocationChange?: (lat: number, lng: number) => void; // 現在地が変化したときのコールバック
+  onSearchStateChange?: (state: SearchFormState) => void; // フォーム状態が変化したときのコールバック
 }
 
 const EMPTY_SEARCH_MESSAGE =
@@ -25,6 +23,15 @@ interface StoredLocation {
   lat: number;
   lng: number;
   timestamp: number;
+}
+
+export interface SearchFormState {
+  address: string;
+  keyword: string;
+  lat: number | null;
+  lng: number | null;
+  range: number;
+  hasStoredLocation: boolean;
 }
 
 const isStoredLocation = (value: unknown): value is StoredLocation => {
@@ -57,24 +64,28 @@ const isReloadNavigation = (): boolean => {
 export const SearchForm: React.FC<SearchFormProps> = ({
   onSearch,
   isLoading,
-  hasSearched = false,
+  selectedGenre = "",
   onLocationChange,
+  onSearchStateChange,
 }) => {
   // 住所キーワードの状態（初期値：空文字列）
   const [address, setAddress] = useState("");
-  // 選択されたジャンルコードの状態（初期値：空文字列）
-  const [selectedGenre, setSelectedGenre] = useState("");
   // フリーワード検索の状態（初期値：空文字列）
   const [keyword, setKeyword] = useState("");
   // バリデーションメッセージの状態
   const [validationMessage, setValidationMessage] = useState("");
 
-  // useGenresフックでジャンル一覧を取得
-  const { genres, isLoading: genresLoading } = useGenres();
-
   // 現在地（Geolocation API）関連の状態
-  const [lat, setLat] = useState<number | null>(null);
-  const [lng, setLng] = useState<number | null>(null);
+  const [lat, setLat] = useState<number | null>(() => {
+    const savedLocation =
+      storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    return isStoredLocation(savedLocation) ? savedLocation.lat : null;
+  });
+  const [lng, setLng] = useState<number | null>(() => {
+    const savedLocation =
+      storageService.get<StoredLocation>(LOCATION_STORAGE_KEY);
+    return isStoredLocation(savedLocation) ? savedLocation.lng : null;
+  });
   const [range, setRange] = useState<number>(3); // デフォルトは3（1000m）
   const [hasStoredLocation, setHasStoredLocation] = useState<boolean>(() => {
     const savedLocation =
@@ -128,20 +139,10 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     [onLocationChange],
   );
 
-  const hasLocationContext =
-    hasStoredLocation || (lat !== null && lng !== null);
-  const hasSearchText = address.trim() !== "" || keyword.trim() !== "";
-  const canUseGenreTabs =
-    hasSearched &&
-    !isLoading &&
-    !genresLoading &&
-    (hasLocationContext || hasSearchText);
-
   interface ExecuteSearchOptions {
     addressValue: string;
     keywordValue: string;
     locationOverride?: StoredLocation | null;
-    genreOverride?: string;
   }
 
   const executeSearch = useCallback(
@@ -149,13 +150,11 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       addressValue,
       keywordValue,
       locationOverride,
-      genreOverride,
     }: ExecuteSearchOptions): boolean => {
       const trimmedAddress = addressValue.trim();
       const trimmedKeyword = keywordValue.trim();
       const effectiveLat = locationOverride?.lat ?? lat;
       const effectiveLng = locationOverride?.lng ?? lng;
-      const effectiveGenre = genreOverride ?? selectedGenre;
 
       const hasLocation = effectiveLat !== null && effectiveLng !== null;
       const hasAddress = trimmedAddress !== "";
@@ -169,7 +168,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       setValidationMessage("");
       onSearch({
         address: hasAddress ? trimmedAddress : undefined,
-        genre: effectiveGenre || undefined,
+        genre: selectedGenre || undefined,
         keyword: hasKeyword ? trimmedKeyword : undefined,
         lat: hasLocation ? effectiveLat : undefined,
         lng: hasLocation ? effectiveLng : undefined,
@@ -240,22 +239,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     });
   };
 
-  const handleGenreTabClick = (genreCode: string) => {
-    if (!canUseGenreTabs || selectedGenre === genreCode) {
-      return;
-    }
-
-    setSelectedGenre(genreCode);
-    const storedLocation = getStoredLocation();
-
-    executeSearch({
-      addressValue: address,
-      keywordValue: keyword,
-      locationOverride: storedLocation,
-      genreOverride: genreCode,
-    });
-  };
-
   // ページアクセス時に現在地取得を試行
   useEffect(() => {
     const savedLocation =
@@ -278,6 +261,25 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       void requestCurrentLocation(false);
     }
   }, [onLocationChange, requestCurrentLocation]);
+
+  useEffect(() => {
+    onSearchStateChange?.({
+      address,
+      keyword,
+      lat,
+      lng,
+      range,
+      hasStoredLocation,
+    });
+  }, [
+    address,
+    keyword,
+    lat,
+    lng,
+    range,
+    hasStoredLocation,
+    onSearchStateChange,
+  ]);
 
   return (
     <form
@@ -362,15 +364,6 @@ export const SearchForm: React.FC<SearchFormProps> = ({
             ? "検索（距離順）"
             : "検索（おススメ順）"}
       </button>
-
-      {hasSearched && (
-        <GenreTabs
-          genres={genres}
-          selectedGenre={selectedGenre}
-          canUseGenreTabs={canUseGenreTabs}
-          onGenreTabClick={handleGenreTabClick}
-        />
-      )}
     </form>
   );
 };
