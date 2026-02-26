@@ -1,3 +1,4 @@
+export { AppHeader } from "./AppHeader";
 export { ErrorMessage } from "./ErrorMessage";
 export { GenreTabs } from "./GenreTabs";
 export { LoadingSpinner } from "./LoadingSpinner";
