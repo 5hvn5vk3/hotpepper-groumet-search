@@ -127,7 +127,7 @@ function App() {
       <AppHeader />
 
       {/* メインコンテンツエリア */}
-      <main className="container mx-auto px-4 pt-36 pb-8">
+      <main className="container mx-auto px-4 py-8">
         {/* 検索フォームコンポーネント
             onSearch: 検索実行時のコールバック関数
             isLoading: ローディング中は検索ボタンを無効化 */}
