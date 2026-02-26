@@ -188,6 +188,9 @@ function App() {
     close();
   };
 
+  const hasPagination =
+    searchResult !== null && searchResult.results_available > 0;
+
   // JSXを返す：画面に表示するHTML風の構造
   return (
     // 最小高さを画面全体に、背景色をグレーに設定
@@ -196,7 +199,7 @@ function App() {
       <AppHeader />
 
       {/* メインコンテンツエリア */}
-      <main className="container mx-auto px-4 py-8">
+      <main className={`container mx-auto px-4 py-8 ${hasPagination ? "pb-40" : ""}`}>
         {/* 検索フォームコンポーネント
             onSearch: 検索実行時のコールバック関数
             isLoading: ローディング中は検索ボタンを無効化 */}
@@ -240,18 +243,24 @@ function App() {
         )}
 
         {/* 検索結果があり、かつ結果件数が1件以上の場合、ページネーションを表示 */}
-        {searchResult && searchResult.results_available > 0 && (
-          <Pagination
-            currentPage={currentPage} // 現在のページ番号
-            totalCount={searchResult.results_available} // 総件数
-            count={ITEMS_PER_PAGE} // 1ページあたりの件数
-            onPageChange={handlePageChange} // ページ変更時の処理
-            disabled={isLoading} // ローディング中は無効化
-            start={searchResult.results_start} // 表示開始位置
-            available={searchResult.results_available} // 総利用可能件数
-          />
-        )}
       </main>
+
+      {/* ページャーを画面下部に固定表示 */}
+      {hasPagination && searchResult && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 backdrop-blur-sm">
+          <div className="container mx-auto">
+            <Pagination
+              currentPage={currentPage} // 現在のページ番号
+              totalCount={searchResult.results_available} // 総件数
+              count={ITEMS_PER_PAGE} // 1ページあたりの件数
+              onPageChange={handlePageChange} // ページ変更時の処理
+              disabled={isLoading} // ローディング中は無効化
+              start={searchResult.results_start} // 表示開始位置
+              available={searchResult.results_available} // 総利用可能件数
+            />
+          </div>
+        </div>
+      )}
 
       {/* モーダルが開いており、かつレストランが選択されている場合、詳細画面を表示 */}
       {isOpen && modalRestaurant && (

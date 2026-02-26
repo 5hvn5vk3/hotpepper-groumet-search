@@ -83,7 +83,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     // ページネーションコンテナ
     // flex-col: モバイルでは縦並び
     // md:flex-row: タブレット以上では横並び
-    <div className="bg-white shadow-md rounded-lg p-4 mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="bg-white shadow-md rounded-lg p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       {/* 表示範囲の情報テキスト */}
       <p className="text-sm text-gray-600">
         {/* toLocaleString(): 数値を地域の形式でフォーマット（例：1000 → 1,000） */}
