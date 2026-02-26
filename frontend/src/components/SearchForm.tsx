@@ -372,7 +372,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
           <div
             role="tablist"
             aria-label="ジャンルタブ"
-            className="flex items-start gap-2 overflow-x-auto pb-2 md:overflow-visible"
+            className="flex items-stretch gap-2 overflow-x-auto pb-2 md:overflow-visible"
           >
             <button
               type="button"
@@ -382,8 +382,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
               disabled={!canUseGenreTabs}
               onClick={() => handleGenreTabClick("")}
               className={
-                "shrink-0 rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line transition-colors " +
-                "md:[writing-mode:vertical-rl] md:[text-orientation:upright] md:h-36 md:min-w-[3.25rem] " +
+                "shrink-0 flex items-center justify-center rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line text-center transition-colors " +
                 (selectedGenre === ""
                   ? "bg-white text-red-600 border-red-600"
                   : "bg-red-600 text-white border-red-600") +
@@ -403,8 +402,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
                 disabled={!canUseGenreTabs}
                 onClick={() => handleGenreTabClick(genre.code)}
                 className={
-                  "shrink-0 rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line transition-colors " +
-                  "md:[writing-mode:vertical-rl] md:[text-orientation:upright] md:h-36 md:min-w-[3.25rem] " +
+                  "shrink-0 flex items-center justify-center rounded-md border px-3 py-2 text-sm font-bold leading-tight whitespace-pre-line text-center transition-colors " +
                   (selectedGenre === genre.code
                     ? "bg-white text-red-600 border-red-600"
                     : "bg-red-600 text-white border-red-600") +
