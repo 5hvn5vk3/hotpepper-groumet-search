@@ -7,3 +7,4 @@ export { RestaurantDetail } from "./RestaurantDetail";
 export { RestaurantList } from "./RestaurantList";
 export { SearchForm } from "./SearchForm";
 export { SearchTextField } from "./SearchTextField";
+export { ScrollToTopButton } from "./ScrollToTopButton";

@@ -9,6 +9,7 @@ import {
   RestaurantDetail, // レストラン詳細モーダルコンポーネント
   RestaurantList, // レストラン一覧表示コンポーネント
   SearchForm, // 検索フォームコンポーネント
+  ScrollToTopButton,
 } from "@/components"; // コンポーネントのインデックスから一括インポート
 // TypeScript型定義をインポート
 import type { RestaurantDetailStatus, SearchParams, Shop } from "@/types";
@@ -18,7 +19,7 @@ import { useRestaurantSearch } from "@/hooks/useRestaurantSearch"; // レスト�
 import { useModal } from "@/hooks/useModal"; // モーダルの開閉を管理
 import { fetchRestaurantDetail } from "@/api/restaurantApi";
 import type { SearchFormState } from "@/components/SearchForm";
-import { useCallback, useMemo, useRef, useState } from "react"; // 現在地状態を管理
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"; // 現在地状態を管理
 // 定数をインポート
 import { ITEMS_PER_PAGE } from "@/constants"; // 1ページあたりの表示件数
 
@@ -56,7 +57,9 @@ function App() {
   const [detailRestaurant, setDetailRestaurant] = useState<Shop | null>(null);
   const [detailStatus, setDetailStatus] =
     useState<RestaurantDetailStatus>("idle");
+  const [fixedControlsHeight, setFixedControlsHeight] = useState(0);
   const detailRequestIdRef = useRef(0);
+  const fixedControlsRef = useRef<HTMLDivElement | null>(null);
   const { genres, isLoading: genresLoading } = useGenres();
 
   const modalRestaurant = useMemo(() => {
@@ -190,6 +193,43 @@ function App() {
 
   const hasPagination =
     searchResult !== null && searchResult.results_available > 0;
+  const reservedBottomSpace = hasPagination
+    ? Math.max(fixedControlsHeight, 224)
+    : 0;
+
+  useEffect(() => {
+    if (!hasPagination) {
+      setFixedControlsHeight(0);
+      return;
+    }
+
+    const controlsElement = fixedControlsRef.current;
+    if (!controlsElement) {
+      return;
+    }
+
+    const updateHeight = () => {
+      setFixedControlsHeight(controlsElement.getBoundingClientRect().height);
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateHeight);
+      return () => {
+        window.removeEventListener("resize", updateHeight);
+      };
+    }
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(controlsElement);
+    window.addEventListener("resize", updateHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [hasPagination]);
 
   // JSXを返す：画面に表示するHTML風の構造
   return (
@@ -199,7 +239,14 @@ function App() {
       <AppHeader />
 
       {/* メインコンテンツエリア */}
-      <main className={`container mx-auto px-4 py-8 ${hasPagination ? "pb-40" : ""}`}>
+      <main
+        className="container mx-auto px-4 py-8"
+        style={
+          hasPagination
+            ? { paddingBottom: `calc(2rem + ${reservedBottomSpace}px)` }
+            : undefined
+        }
+      >
         {/* 検索フォームコンポーネント
             onSearch: 検索実行時のコールバック関数
             isLoading: ローディング中は検索ボタンを無効化 */}
@@ -247,17 +294,23 @@ function App() {
 
       {/* ページャーを画面下部に固定表示 */}
       {hasPagination && searchResult && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 backdrop-blur-sm">
-          <div className="container mx-auto">
-            <Pagination
-              currentPage={currentPage} // 現在のページ番号
-              totalCount={searchResult.results_available} // 総件数
-              count={ITEMS_PER_PAGE} // 1ページあたりの件数
-              onPageChange={handlePageChange} // ページ変更時の処理
-              disabled={isLoading} // ローディング中は無効化
-              start={searchResult.results_start} // 表示開始位置
-              available={searchResult.results_available} // 総利用可能件数
-            />
+        <div
+          ref={fixedControlsRef}
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 backdrop-blur-sm"
+        >
+          <div className="container mx-auto flex flex-col items-end gap-2">
+            <ScrollToTopButton />
+            <div className="w-full">
+              <Pagination
+                currentPage={currentPage} // 現在のページ番号
+                totalCount={searchResult.results_available} // 総件数
+                count={ITEMS_PER_PAGE} // 1ページあたりの件数
+                onPageChange={handlePageChange} // ページ変更時の処理
+                disabled={isLoading} // ローディング中は無効化
+                start={searchResult.results_start} // 表示開始位置
+                available={searchResult.results_available} // 総利用可能件数
+              />
+            </div>
           </div>
         </div>
       )}
