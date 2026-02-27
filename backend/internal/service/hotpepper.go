@@ -26,7 +26,7 @@ func NewHotpepperService(apiKey string) *HotpepperService {
 	return &HotpepperService{
 		apiKey:  apiKey,
 		baseURL: hotpepperBaseURL,
-		client:  &http.Client{Timeout: 10 * time.Second},
+		client:  &http.Client{Timeout: 60 * time.Second},
 	}
 }
 
