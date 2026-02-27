@@ -39,19 +39,19 @@ export const useRestaurantSearch = (itemsPerPage: number): UseRestaurantSearchRe
         finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [itemsPerPage]);
     const search = useCallback(async (params: GourmetSearchParams) => {
         setCurrentParams(params);
         setCurrentPage(1);
         await fetchRestaurants(params, 1);
-    }, []);
+    }, [fetchRestaurants]);
     const changePage = useCallback(async (page: number) => {
         if (!currentParams || page === currentPage) {
             return;
         }
         setCurrentPage(page);
         await fetchRestaurants(currentParams, page);
-    }, [currentParams, currentPage]);
+    }, [currentParams, currentPage, fetchRestaurants]);
     const clearError = useCallback(() => {
         setError(null);
     }, []);

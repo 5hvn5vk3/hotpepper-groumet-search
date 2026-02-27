@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"backend/internal/types"
 )
@@ -17,6 +18,7 @@ const hotpepperBaseURL = "http://webservice.recruit.co.jp/hotpepper"
 type HotpepperService struct {
 	apiKey  string
 	baseURL string
+	client  *http.Client
 }
 
 func NewHotpepperService(apiKey string) *HotpepperService {
@@ -24,6 +26,7 @@ func NewHotpepperService(apiKey string) *HotpepperService {
 	return &HotpepperService{
 		apiKey:  apiKey,
 		baseURL: hotpepperBaseURL,
+		client:  &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -124,7 +127,7 @@ func (s *HotpepperService) GetGenreMaster() (*types.GenreMasterResponse, error) 
 
 func (s *HotpepperService) fetchAPI(apiURL string) ([]byte, error) {
 
-	resp, err := http.Get(apiURL)
+	resp, err := s.client.Get(apiURL)
 
 	if err != nil {
 
@@ -141,7 +144,7 @@ func (s *HotpepperService) fetchAPI(apiURL string) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 
-		return nil, fmt.Errorf("API returned status code %d", resp.StatusCode)
+		return nil, fmt.Errorf("API returned status code %d: %s", resp.StatusCode, string(body))
 	}
 
 	return body, nil
