@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { GourmetSearchParams } from "@/types";
 import { storageService } from "@/services/storageService";
 import { SearchTextField } from "./SearchTextField";
@@ -56,6 +56,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
   onLocationChange,
   onSearchStateChange,
 }) => {
+  const isLocationRefreshInProgressRef = useRef(false);
   const [address, setAddress] = useState("");
   const [keyword, setKeyword] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
@@ -152,57 +153,51 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     },
     [lat, lng, onSearch, range, selectedGenre],
   );
+  const refreshLocationIfExpired = useCallback(
+    async (showErrorAlert: boolean): Promise<StoredLocation | null> => {
+      const locationFromStorage = getStoredLocation();
+      if (!navigator.geolocation) {
+        return locationFromStorage;
+      }
+      const hasExpiredSavedLocation =
+        locationFromStorage !== null &&
+        Date.now() - locationFromStorage.timestamp >=
+          LOCATION_REFRESH_INTERVAL_MS;
+      const supportsPermissionQuery =
+        typeof navigator.permissions?.query === "function";
+      if (!hasExpiredSavedLocation || !supportsPermissionQuery) {
+        return locationFromStorage;
+      }
+      if (isLocationRefreshInProgressRef.current) {
+        return locationFromStorage;
+      }
+      isLocationRefreshInProgressRef.current = true;
+      try {
+        const permissionStatus = await navigator.permissions.query({
+          name: "geolocation",
+        });
+        if (permissionStatus.state !== "granted") {
+          return locationFromStorage;
+        }
+        const nextLocation = await requestCurrentLocation(showErrorAlert);
+        return nextLocation ?? locationFromStorage;
+      } catch (err) {
+        console.error(err);
+        return locationFromStorage;
+      } finally {
+        isLocationRefreshInProgressRef.current = false;
+      }
+    },
+    [getStoredLocation, requestCurrentLocation],
+  );
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const locationFromStorage = getStoredLocation();
-    if (!navigator.geolocation) {
+    void refreshLocationIfExpired(true).then((locationForSearch) => {
       executeSearch({
         addressValue: address,
         keywordValue: keyword,
-        locationOverride: locationFromStorage,
+        locationOverride: locationForSearch,
       });
-      return;
-    }
-    const hasExpiredSavedLocation =
-      locationFromStorage !== null &&
-      Date.now() - locationFromStorage.timestamp >=
-        LOCATION_REFRESH_INTERVAL_MS;
-    const supportsPermissionQuery =
-      typeof navigator.permissions?.query === "function";
-    if (hasExpiredSavedLocation && supportsPermissionQuery) {
-      void navigator.permissions
-        .query({ name: "geolocation" })
-        .then((permissionStatus) => {
-          if (permissionStatus.state === "granted") {
-            void requestCurrentLocation(true).then((nextLocation) => {
-              executeSearch({
-                addressValue: address,
-                keywordValue: keyword,
-                locationOverride: nextLocation ?? locationFromStorage,
-              });
-            });
-            return;
-          }
-          executeSearch({
-            addressValue: address,
-            keywordValue: keyword,
-            locationOverride: locationFromStorage,
-          });
-        })
-        .catch((err) => {
-          console.error(err);
-          executeSearch({
-            addressValue: address,
-            keywordValue: keyword,
-            locationOverride: locationFromStorage,
-          });
-        });
-      return;
-    }
-    executeSearch({
-      addressValue: address,
-      keywordValue: keyword,
-      locationOverride: locationFromStorage,
     });
   };
   useEffect(() => {
@@ -223,6 +218,19 @@ export const SearchForm: React.FC<SearchFormProps> = ({
       void requestCurrentLocation(false);
     }
   }, [onLocationChange, requestCurrentLocation]);
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      void refreshLocationIfExpired(false);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshLocationIfExpired]);
   useEffect(() => {
     onSearchStateChange?.({
       address,
