@@ -26,7 +26,7 @@ function App() {
     const [fixedControlsHeight, setFixedControlsHeight] = useState(0);
     const detailRequestIdRef = useRef(0);
     const fixedControlsRef = useRef<HTMLDivElement | null>(null);
-    const { genres, isLoading: genresLoading } = useGenres();
+    const { genres, isLoading: genresLoading, error: genresError, clearError: clearGenresError } = useGenres();
     const modalRestaurant = useMemo(() => {
         if (!selectedRestaurant) {
             return null;
@@ -40,10 +40,10 @@ function App() {
             credit_card: selectedRestaurant.credit_card,
         };
     }, [selectedRestaurant, detailRestaurant]);
-    const handleLocationChange = (lat: number, lng: number) => {
+    const handleLocationChange = useCallback((lat: number, lng: number) => {
         setUserLat(lat);
         setUserLng(lng);
-    };
+    }, []);
     const handleSearch = (params: SearchParams) => {
         setSelectedGenre(params.genre ?? "");
         search(params);
@@ -146,10 +146,8 @@ function App() {
         }
         const observer = new ResizeObserver(updateHeight);
         observer.observe(controlsElement);
-        window.addEventListener("resize", updateHeight);
         return () => {
             observer.disconnect();
-            window.removeEventListener("resize", updateHeight);
         };
     }, [hasPagination]);
     return (<div className="min-h-screen bg-gray-100">
@@ -169,6 +167,7 @@ function App() {
 
         
         {error && <ErrorMessage message={error} onClose={clearError}/>}
+        {genresError && <ErrorMessage message={genresError} onClose={clearGenresError}/>}
 
         
         {isLoading && <LoadingSpinner />}

@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Genre } from "@/types";
 import { getGenres } from "@/api/genreApi";
 interface UseGenresResult {
     genres: Genre[];
     isLoading: boolean;
     error: string | null;
+    clearError: () => void;
 }
 export const useGenres = (): UseGenresResult => {
     const [genres, setGenres] = useState<Genre[]>([]);
@@ -29,5 +30,8 @@ export const useGenres = (): UseGenresResult => {
         };
         fetchGenres();
     }, []);
-    return { genres, isLoading, error };
+    const clearError = useCallback(() => {
+        setError(null);
+    }, []);
+    return { genres, isLoading, error, clearError };
 };
