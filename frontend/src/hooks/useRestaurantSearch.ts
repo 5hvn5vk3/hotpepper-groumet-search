@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { GourmetSearchResponse, GourmetSearchParams } from "@/types";
 import { searchRestaurants } from "@/api/restaurantApi";
 interface UseRestaurantSearchResult {
@@ -19,7 +19,8 @@ export const useRestaurantSearch = (itemsPerPage: number): UseRestaurantSearchRe
     const [error, setError] = useState<string | null>(null);
     const [currentParams, setCurrentParams] = useState<GourmetSearchParams | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const fetchRestaurants = useCallback(async (params: GourmetSearchParams, page: number) => {
+    const latestRequestIdRef = useRef(0);
+    const fetchRestaurants = useCallback(async (params: GourmetSearchParams, page: number, requestId: number): Promise<GourmetSearchResponse["results"] | null> => {
         setIsLoading(true);
         setHasSearched(true);
         setError(null);
@@ -29,28 +30,47 @@ export const useRestaurantSearch = (itemsPerPage: number): UseRestaurantSearchRe
                 page,
                 count: itemsPerPage,
             });
-            setSearchResult(response.results);
+            if (latestRequestIdRef.current !== requestId) {
+                return null;
+            }
+            return response.results;
         }
         catch (err) {
+            if (latestRequestIdRef.current !== requestId) {
+                return null;
+            }
             const errorMessage = err instanceof Error ? err.message : "検索に失敗しました";
             setError(errorMessage);
             console.error("Search failed:", err);
+            return null;
         }
         finally {
-            setIsLoading(false);
+            if (latestRequestIdRef.current === requestId) {
+                setIsLoading(false);
+            }
         }
     }, [itemsPerPage]);
     const search = useCallback(async (params: GourmetSearchParams) => {
+        const requestId = ++latestRequestIdRef.current;
         setCurrentParams(params);
+        const nextResults = await fetchRestaurants(params, 1, requestId);
+        if (!nextResults) {
+            return;
+        }
+        setSearchResult(nextResults);
         setCurrentPage(1);
-        await fetchRestaurants(params, 1);
     }, [fetchRestaurants]);
     const changePage = useCallback(async (page: number) => {
         if (!currentParams || page === currentPage) {
             return;
         }
+        const requestId = ++latestRequestIdRef.current;
+        const nextResults = await fetchRestaurants(currentParams, page, requestId);
+        if (!nextResults) {
+            return;
+        }
+        setSearchResult(nextResults);
         setCurrentPage(page);
-        await fetchRestaurants(currentParams, page);
     }, [currentParams, currentPage, fetchRestaurants]);
     const clearError = useCallback(() => {
         setError(null);
