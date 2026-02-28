@@ -1,5 +1,5 @@
 import { AppHeader, ErrorMessage, GenreTabs, LoadingSpinner, Pagination, RestaurantDetail, RestaurantList, SearchForm, ScrollToTopButton, } from "@/components";
-import type { RestaurantDetailStatus, SearchParams, Shop } from "@/types";
+import type { RestaurantDetailStatus, GourmetSearchParams, Shop } from "@/types";
 import { useGenres } from "@/hooks/useGenres";
 import { useRestaurantSearch } from "@/hooks/useRestaurantSearch";
 import { useModal } from "@/hooks/useModal";
@@ -44,7 +44,7 @@ function App() {
         setUserLat(lat);
         setUserLng(lng);
     }, []);
-    const handleSearch = (params: SearchParams) => {
+    const handleSearch = (params: GourmetSearchParams) => {
         setSelectedGenre(params.genre ?? "");
         search(params);
     };

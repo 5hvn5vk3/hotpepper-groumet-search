@@ -1,5 +1,4 @@
 export interface ShopCreditCard {
-  code: string;
   name: string;
 }
 export interface Shop {
@@ -30,8 +29,6 @@ export interface Shop {
   photo: {
     pc: {
       l: string;
-      m: string;
-      s: string;
     };
   };
   credit_card?: ShopCreditCard[];
@@ -39,9 +36,7 @@ export interface Shop {
 export type RestaurantDetailStatus = "idle" | "loading" | "ready" | "failed";
 export interface GourmetSearchResponse {
   results: {
-    api_version: string;
     results_available: number;
-    results_returned: string;
     results_start: number;
     shop: Shop[];
   };
@@ -52,10 +47,6 @@ export interface Genre {
 }
 export interface GenreMasterResponse {
   results: {
-    api_version: string;
-    results_available: number;
-    results_returned: string;
-    results_start: number;
     genre: Genre[];
   };
 }
@@ -69,7 +60,6 @@ export interface GourmetSearchParams {
   lng?: number;
   range?: number;
 }
-export type SearchParams = GourmetSearchParams;
 
 // 非2xx時のエラーレスポンス型（成功型とは分離）
 export interface APIErrorResponse {

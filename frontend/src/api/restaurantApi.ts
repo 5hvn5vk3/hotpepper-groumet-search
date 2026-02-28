@@ -9,9 +9,7 @@ export const searchRestaurants = async (params: GourmetSearchParams): Promise<Go
     if (!hasLatLng && !hasAddress && !hasKeyword) {
         return {
             results: {
-                api_version: "1.0",
                 results_available: 0,
-                results_returned: "0",
                 results_start: 1,
                 shop: [],
             },
