@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -76,14 +77,7 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 	}
 
 	if response.Results.Error != nil {
-		switch response.Results.Error.Code {
-		case 2000:
-			return nil, fmt.Errorf("API auth error: %s", response.Results.Error.Message)
-		case 3000:
-			return nil, fmt.Errorf("API parameter error: %s", response.Results.Error.Message)
-		default:
-			return nil, fmt.Errorf("API server error: %s", response.Results.Error.Message)
-		}
+		return nil, convertAPIError(response.Results.Error)
 	}
 
 	return &response, nil
@@ -113,14 +107,7 @@ func (s *HotpepperService) GetGourmetDetail(id string) (*types.GourmetSearchResp
 	}
 
 	if response.Results.Error != nil {
-		switch response.Results.Error.Code {
-		case 2000:
-			return nil, fmt.Errorf("API auth error: %s", response.Results.Error.Message)
-		case 3000:
-			return nil, fmt.Errorf("API parameter error: %s", response.Results.Error.Message)
-		default:
-			return nil, fmt.Errorf("API server error: %s", response.Results.Error.Message)
-		}
+		return nil, convertAPIError(response.Results.Error)
 	}
 
 	return &response, nil
@@ -145,14 +132,7 @@ func (s *HotpepperService) GetGenreMaster() (*types.GenreMasterResponse, error) 
 	}
 
 	if response.Results.Error != nil {
-		switch response.Results.Error.Code {
-		case 2000:
-			return nil, fmt.Errorf("API auth error: %s", response.Results.Error.Message)
-		case 3000:
-			return nil, fmt.Errorf("API parameter error: %s", response.Results.Error.Message)
-		default:
-			return nil, fmt.Errorf("API server error: %s", response.Results.Error.Message)
-		}
+		return nil, convertAPIError(response.Results.Error)
 	}
 
 	return &response, nil
@@ -181,6 +161,13 @@ func (s *HotpepperService) fetchAPI(apiURL string) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+// convertAPIError はホットペッパーAPIのエラーをHotpepperAPIErrorに変換する。
+// 生のエラーメッセージは情報漏洩防止のためログのみに出力し、外部には返さない。
+func convertAPIError(apiErr *types.APIError) error {
+	log.Printf("hotpepper API error: code=%d, message=%s", apiErr.Code, apiErr.Message)
+	return &types.HotpepperAPIError{Code: apiErr.Code}
 }
 
 func clampInt(value, min, max int) int {

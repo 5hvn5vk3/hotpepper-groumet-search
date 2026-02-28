@@ -58,8 +58,7 @@ func (h *GourmetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-
-		http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
+		handleServiceError(w, err)
 		return
 	}
 

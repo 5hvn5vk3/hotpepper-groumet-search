@@ -28,8 +28,7 @@ func (h *GenreHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	response, err := h.service.GetGenreMaster()
 
 	if err != nil {
-
-		http.Error(w, "Failed to fetch data", http.StatusInternalServerError)
+		handleServiceError(w, err)
 		return
 	}
 
