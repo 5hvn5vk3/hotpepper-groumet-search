@@ -75,6 +75,17 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	if response.Results.Error != nil {
+		switch response.Results.Error.Code {
+		case 2000:
+			return nil, fmt.Errorf("API auth error: %s", response.Results.Error.Message)
+		case 3000:
+			return nil, fmt.Errorf("API parameter error: %s", response.Results.Error.Message)
+		default:
+			return nil, fmt.Errorf("API server error: %s", response.Results.Error.Message)
+		}
+	}
+
 	return &response, nil
 }
 
@@ -101,6 +112,17 @@ func (s *HotpepperService) GetGourmetDetail(id string) (*types.GourmetSearchResp
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	if response.Results.Error != nil {
+		switch response.Results.Error.Code {
+		case 2000:
+			return nil, fmt.Errorf("API auth error: %s", response.Results.Error.Message)
+		case 3000:
+			return nil, fmt.Errorf("API parameter error: %s", response.Results.Error.Message)
+		default:
+			return nil, fmt.Errorf("API server error: %s", response.Results.Error.Message)
+		}
+	}
+
 	return &response, nil
 }
 
@@ -120,6 +142,17 @@ func (s *HotpepperService) GetGenreMaster() (*types.GenreMasterResponse, error) 
 	var response types.GenreMasterResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if response.Results.Error != nil {
+		switch response.Results.Error.Code {
+		case 2000:
+			return nil, fmt.Errorf("API auth error: %s", response.Results.Error.Message)
+		case 3000:
+			return nil, fmt.Errorf("API parameter error: %s", response.Results.Error.Message)
+		default:
+			return nil, fmt.Errorf("API server error: %s", response.Results.Error.Message)
+		}
 	}
 
 	return &response, nil

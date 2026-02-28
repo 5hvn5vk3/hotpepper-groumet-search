@@ -14,6 +14,13 @@ type GourmetSearchResults struct {
 	ResultsStart int `json:"results_start"`
 
 	Shop []Shop `json:"shop"`
+
+	Error *APIError `json:"error"`
+}
+
+type APIError struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
 }
 
 type Shop struct {
@@ -102,6 +109,8 @@ type GenreMasterResults struct {
 	ResultsStart int `json:"results_start"`
 
 	Genre []Genre `json:"genre"`
+
+	Error *APIError `json:"error"`
 }
 
 type Genre struct {
