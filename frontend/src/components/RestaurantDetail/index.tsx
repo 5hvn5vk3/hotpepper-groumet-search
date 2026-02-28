@@ -1,12 +1,12 @@
 import React from "react";
-import type { RestaurantDetailStatus, Shop } from "@/types";
+import type { RestaurantDetailStatus, ShopDetailView } from "@/types";
 import { ActionLinks } from "./ActionLinks";
 import { DeferredSection } from "./DeferredSection";
 import { DetailSection } from "./DetailSection";
 import { DistanceSection } from "./DistanceSection";
 import { FacilitiesSection } from "./FacilitiesSection";
 interface RestaurantDetailProps {
-  restaurant: Shop;
+  restaurant: ShopDetailView;
   detailStatus: RestaurantDetailStatus;
   onClose: () => void;
   userLat?: number;

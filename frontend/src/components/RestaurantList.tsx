@@ -1,9 +1,9 @@
 import React from "react";
-import type { Shop } from "@/types";
+import type { ShopListItem } from "@/types";
 import { calculateDistance, formatDistance } from "@/utils/distance";
 interface RestaurantListProps {
-    restaurants: Shop[];
-    onSelectRestaurant: (restaurant: Shop) => void;
+    restaurants: ShopListItem[];
+    onSelectRestaurant: (restaurant: ShopListItem) => void;
     userLat?: number;
     userLng?: number;
 }

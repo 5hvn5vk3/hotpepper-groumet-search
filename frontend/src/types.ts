@@ -1,21 +1,37 @@
 export interface ShopCreditCard {
   name: string;
 }
-export interface Shop {
+
+export interface ShopGenre {
+  name: string;
+  catch: string;
+}
+
+export interface ShopURLs {
+  pc: string;
+}
+
+export interface ShopPhoto {
+  pc: {
+    l: string;
+  };
+}
+
+export interface ShopListItem {
   id: string;
   name: string;
   address: string;
   lat: number;
   lng: number;
-  genre: {
-    name: string;
-    catch: string;
-  };
+  genre: ShopGenre;
   catch: string;
   access: string;
-  urls: {
-    pc: string;
-  };
+  urls: ShopURLs;
+  photo: ShopPhoto;
+  credit_card?: ShopCreditCard[];
+}
+
+export interface ShopDetailSupplement {
   open?: string;
   close?: string;
   budget_memo?: string;
@@ -26,19 +42,16 @@ export interface Shop {
   lunch?: string;
   midnight?: string;
   shop_detail_memo?: string;
-  photo: {
-    pc: {
-      l: string;
-    };
-  };
-  credit_card?: ShopCreditCard[];
 }
+
+export type ShopDetailView = ShopListItem & ShopDetailSupplement;
+
 export type RestaurantDetailStatus = "idle" | "loading" | "ready" | "failed";
-export interface GourmetSearchResponse {
+export interface GourmetSearchResponse<TShop> {
   results: {
     results_available: number;
     results_start: number;
-    shop: Shop[];
+    shop: TShop[];
   };
 }
 export interface Genre {

@@ -1,5 +1,5 @@
 import { AppHeader, ErrorMessage, GenreTabs, LoadingSpinner, Pagination, RestaurantDetail, RestaurantList, SearchForm, ScrollToTopButton, } from "@/components";
-import type { RestaurantDetailStatus, GourmetSearchParams, Shop } from "@/types";
+import type { RestaurantDetailStatus, GourmetSearchParams, ShopDetailSupplement, ShopDetailView, ShopListItem } from "@/types";
 import { useGenres } from "@/hooks/useGenres";
 import { useRestaurantSearch } from "@/hooks/useRestaurantSearch";
 import { useModal } from "@/hooks/useModal";
@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ITEMS_PER_PAGE } from "@/constants";
 function App() {
     const { searchResult, isLoading, hasSearched, error, currentPage, search, changePage, clearError, } = useRestaurantSearch(ITEMS_PER_PAGE);
-    const { isOpen, data: selectedRestaurant, open, close } = useModal<Shop>();
+    const { isOpen, data: selectedRestaurant, open, close } = useModal<ShopListItem>();
     const [userLat, setUserLat] = useState<number | null>(null);
     const [userLng, setUserLng] = useState<number | null>(null);
     const [selectedGenre, setSelectedGenre] = useState("");
@@ -21,13 +21,13 @@ function App() {
         range: 3,
         hasStoredLocation: false,
     });
-    const [detailRestaurant, setDetailRestaurant] = useState<Shop | null>(null);
+    const [detailRestaurant, setDetailRestaurant] = useState<ShopDetailSupplement | null>(null);
     const [detailStatus, setDetailStatus] = useState<RestaurantDetailStatus>("idle");
     const [fixedControlsHeight, setFixedControlsHeight] = useState(0);
     const detailRequestIdRef = useRef(0);
     const fixedControlsRef = useRef<HTMLDivElement | null>(null);
     const { genres, isLoading: genresLoading, error: genresError, clearError: clearGenresError } = useGenres();
-    const modalRestaurant = useMemo(() => {
+    const modalRestaurant = useMemo<ShopDetailView | null>(() => {
         if (!selectedRestaurant) {
             return null;
         }
@@ -37,7 +37,6 @@ function App() {
         return {
             ...selectedRestaurant,
             ...detailRestaurant,
-            credit_card: selectedRestaurant.credit_card,
         };
     }, [selectedRestaurant, detailRestaurant]);
     const handleLocationChange = useCallback((lat: number, lng: number) => {
@@ -91,7 +90,7 @@ function App() {
     const handlePageChange = (page: number) => {
         changePage(page);
     };
-    const handleSelectRestaurant = async (restaurant: Shop) => {
+    const handleSelectRestaurant = async (restaurant: ShopListItem) => {
         open(restaurant);
         setDetailRestaurant(null);
         setDetailStatus("loading");

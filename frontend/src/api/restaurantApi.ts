@@ -1,6 +1,30 @@
-import type { GourmetSearchResponse, GourmetSearchParams, Shop } from "@/types";
+import type {
+    GourmetSearchParams,
+    GourmetSearchResponse,
+    ShopDetailSupplement,
+    ShopDetailView,
+    ShopListItem,
+} from "@/types";
 import { apiGet } from "@/api/client";
-export const searchRestaurants = async (params: GourmetSearchParams): Promise<GourmetSearchResponse> => {
+
+const pickShopDetailSupplement = (
+    detail: ShopDetailView,
+): ShopDetailSupplement => ({
+    open: detail.open,
+    close: detail.close,
+    budget_memo: detail.budget_memo,
+    wifi: detail.wifi,
+    private_room: detail.private_room,
+    non_smoking: detail.non_smoking,
+    parking: detail.parking,
+    lunch: detail.lunch,
+    midnight: detail.midnight,
+    shop_detail_memo: detail.shop_detail_memo,
+});
+
+export const searchRestaurants = async (
+    params: GourmetSearchParams,
+): Promise<GourmetSearchResponse<ShopListItem>> => {
     const hasLatLng = typeof params.lat === "number" && typeof params.lng === "number";
     const address = params.address?.trim() ?? "";
     const keyword = params.keyword?.trim() ?? "";
@@ -38,14 +62,25 @@ export const searchRestaurants = async (params: GourmetSearchParams): Promise<Go
             queryParams.set("range", params.range.toString());
         }
     }
-    return apiGet<GourmetSearchResponse>(`/api/gourmet?${queryParams}`);
+    return apiGet<GourmetSearchResponse<ShopListItem>>(
+        `/api/gourmet?${queryParams}`,
+    );
 };
-export const fetchRestaurantDetail = async (id: string): Promise<Shop | null> => {
+
+export const fetchRestaurantDetail = async (
+    id: string,
+): Promise<ShopDetailSupplement | null> => {
     const shopID = id.trim();
     if (shopID === "") {
         return null;
     }
     const queryParams = new URLSearchParams({ id: shopID });
-    const response = await apiGet<GourmetSearchResponse>(`/api/gourmet?${queryParams}`);
-    return response.results.shop[0] ?? null;
+    const response = await apiGet<GourmetSearchResponse<ShopDetailView>>(
+        `/api/gourmet?${queryParams}`,
+    );
+    const detail = response.results.shop[0];
+    if (!detail) {
+        return null;
+    }
+    return pickShopDetailSupplement(detail);
 };

@@ -1,9 +1,13 @@
 import { useState, useCallback, useRef } from "react";
-import type { GourmetSearchResponse, GourmetSearchParams } from "@/types";
+import type {
+  GourmetSearchResponse,
+  GourmetSearchParams,
+  ShopListItem,
+} from "@/types";
 import { searchRestaurants } from "@/api/restaurantApi";
 import { ApiError } from "@/api/client";
 interface UseRestaurantSearchResult {
-  searchResult: GourmetSearchResponse["results"] | null;
+  searchResult: GourmetSearchResponse<ShopListItem>["results"] | null;
   isLoading: boolean;
   hasSearched: boolean;
   error: string | null;
@@ -17,7 +21,7 @@ export const useRestaurantSearch = (
   itemsPerPage: number,
 ): UseRestaurantSearchResult => {
   const [searchResult, setSearchResult] = useState<
-    GourmetSearchResponse["results"] | null
+    GourmetSearchResponse<ShopListItem>["results"] | null
   >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -31,7 +35,7 @@ export const useRestaurantSearch = (
       params: GourmetSearchParams,
       page: number,
       requestId: number,
-    ): Promise<GourmetSearchResponse["results"] | null> => {
+    ): Promise<GourmetSearchResponse<ShopListItem>["results"] | null> => {
       setIsLoading(true);
       setHasSearched(true);
       setError(null);
