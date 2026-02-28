@@ -36,26 +36,15 @@ func (h *GourmetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var (
-		response *types.GourmetSearchResponse
-		err      error
-	)
+	params, parseErr := h.parseParams(r)
 
-	shopID := strings.TrimSpace(r.URL.Query().Get("id"))
-	if shopID != "" {
-		response, err = h.service.GetGourmetDetail(shopID)
-	} else {
+	if parseErr != nil {
 
-		params, parseErr := h.parseParams(r)
-
-		if parseErr != nil {
-
-			http.Error(w, parseErr.Error(), http.StatusBadRequest)
-			return
-		}
-
-		response, err = h.service.SearchGourmet(params)
+		http.Error(w, parseErr.Error(), http.StatusBadRequest)
+		return
 	}
+
+	response, err := h.service.SearchGourmet(params)
 
 	if err != nil {
 		handleServiceError(w, err)

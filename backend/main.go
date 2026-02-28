@@ -32,12 +32,14 @@ func main() {
 	hotpepperService := service.NewHotpepperService(apiKey)
 
 	gourmetHandler := handler.NewGourmetHandler(hotpepperService)
+	gourmetDetailHandler := handler.NewGourmetDetailHandler(hotpepperService)
 
 	genreHandler := handler.NewGenreHandler(hotpepperService)
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/api/gourmet", middleware.CORS(allowedOrigin, gourmetHandler.Handle))
+	mux.HandleFunc("/api/gourmet/detail", middleware.CORS(allowedOrigin, gourmetDetailHandler.Handle))
 
 	mux.HandleFunc("/api/genre", middleware.CORS(allowedOrigin, genreHandler.Handle))
 

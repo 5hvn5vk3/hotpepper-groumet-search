@@ -2,25 +2,9 @@ import type {
     GourmetSearchParams,
     GourmetSearchResponse,
     ShopDetailSupplement,
-    ShopDetailView,
     ShopListItem,
 } from "@/types";
 import { apiGet } from "@/api/client";
-
-const pickShopDetailSupplement = (
-    detail: ShopDetailView,
-): ShopDetailSupplement => ({
-    open: detail.open,
-    close: detail.close,
-    budget_memo: detail.budget_memo,
-    wifi: detail.wifi,
-    private_room: detail.private_room,
-    non_smoking: detail.non_smoking,
-    parking: detail.parking,
-    lunch: detail.lunch,
-    midnight: detail.midnight,
-    shop_detail_memo: detail.shop_detail_memo,
-});
 
 export const searchRestaurants = async (
     params: GourmetSearchParams,
@@ -75,12 +59,5 @@ export const fetchRestaurantDetail = async (
         return null;
     }
     const queryParams = new URLSearchParams({ id: shopID });
-    const response = await apiGet<GourmetSearchResponse<ShopDetailView>>(
-        `/api/gourmet?${queryParams}`,
-    );
-    const detail = response.results.shop[0];
-    if (!detail) {
-        return null;
-    }
-    return pickShopDetailSupplement(detail);
+    return apiGet<ShopDetailSupplement>(`/api/gourmet/detail?${queryParams}`);
 };
