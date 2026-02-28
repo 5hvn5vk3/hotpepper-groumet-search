@@ -18,10 +18,16 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		log.Printf("hotpepper API error handled: code=%d", apiErr.Code)
 		switch apiErr.Code {
 		case 3000:
+			// パラメータ不正: ユーザーが修正可能
 			writeErrorJSON(w, http.StatusBadRequest, "検索条件が正しくありません")
 			return
+		case 1000:
+			// ホットペッパー側のサーバ障害: 上流障害を示す502
+			writeErrorJSON(w, http.StatusBadGateway, "サービスが一時的に利用できません")
+			return
 		case 2000:
-			writeErrorJSON(w, http.StatusBadGateway, "サービスに接続できませんでした")
+			// APIキー/IP認証エラー: バックエンド設定ミスのため500
+			writeErrorJSON(w, http.StatusInternalServerError, "サービスが一時的に利用できません")
 			return
 		}
 	}
