@@ -13,7 +13,7 @@ import (
 	"backend/internal/types"
 )
 
-const hotpepperBaseURL = "http://webservice.recruit.co.jp/hotpepper"
+const hotpepperBaseURL = "https://webservice.recruit.co.jp/hotpepper"
 
 type HotpepperService struct {
 	apiKey  string
