@@ -5,9 +5,12 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"regexp"
 
 	"backend/internal/types"
 )
+
+var apiKeyQueryPattern = regexp.MustCompile(`([?&]key=)[^&\s]+`)
 
 // handleServiceError はservice層のエラーを判別し、適切なHTTPステータスと
 // ユーザー向けメッセージ（自前定義）をJSONで返す。
@@ -31,8 +34,16 @@ func handleServiceError(w http.ResponseWriter, err error) {
 			return
 		}
 	}
-	log.Printf("internal server error: %v", err)
+	log.Printf("internal server error: %s", maskAPIKeyInLog(err))
 	writeErrorJSON(w, http.StatusInternalServerError, "サービスが一時的に利用できません")
+}
+
+func maskAPIKeyInLog(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	return apiKeyQueryPattern.ReplaceAllString(err.Error(), "${1}[REDACTED]")
 }
 
 func writeErrorJSON(w http.ResponseWriter, status int, message string) {
