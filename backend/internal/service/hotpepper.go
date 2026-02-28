@@ -76,8 +76,8 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if response.Results.Error != nil {
-		return nil, convertAPIError(response.Results.Error)
+	if len(response.Results.Error) > 0 {
+		return nil, convertAPIError(&response.Results.Error[0])
 	}
 
 	return &response, nil
@@ -106,8 +106,8 @@ func (s *HotpepperService) GetGourmetDetail(id string) (*types.GourmetSearchResp
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if response.Results.Error != nil {
-		return nil, convertAPIError(response.Results.Error)
+	if len(response.Results.Error) > 0 {
+		return nil, convertAPIError(&response.Results.Error[0])
 	}
 
 	return &response, nil
@@ -131,8 +131,8 @@ func (s *HotpepperService) GetGenreMaster() (*types.GenreMasterResponse, error) 
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if response.Results.Error != nil {
-		return nil, convertAPIError(response.Results.Error)
+	if len(response.Results.Error) > 0 {
+		return nil, convertAPIError(&response.Results.Error[0])
 	}
 
 	return &response, nil

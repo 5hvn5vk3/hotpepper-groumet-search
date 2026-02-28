@@ -15,7 +15,7 @@ type GourmetSearchResults struct {
 
 	Shop []Shop `json:"shop"`
 
-	Error *APIError `json:"error"`
+	Error []APIError `json:"error"`
 }
 
 type APIError struct {
@@ -110,7 +110,7 @@ type GenreMasterResults struct {
 
 	Genre []Genre `json:"genre"`
 
-	Error *APIError `json:"error"`
+	Error []APIError `json:"error"`
 }
 
 type Genre struct {
