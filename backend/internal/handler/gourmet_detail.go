@@ -19,7 +19,7 @@ func NewGourmetDetailHandler(service *service.HotpepperService) *GourmetDetailHa
 
 func (h *GourmetDetailHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeErrorJSON(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *GourmetDetailHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	detail := toShopDetailSupplement(response.Results.Shop[0])
 	body, err := json.Marshal(detail)
 	if err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		writeErrorJSON(w, http.StatusInternalServerError, "サービスが一時的に利用できません")
 		return
 	}
 

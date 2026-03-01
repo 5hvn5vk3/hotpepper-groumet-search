@@ -33,7 +33,7 @@ func (h *GourmetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
 
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeErrorJSON(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
@@ -41,7 +41,7 @@ func (h *GourmetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	if parseErr != nil {
 
-		http.Error(w, parseErr.Error(), http.StatusBadRequest)
+		writeErrorJSON(w, http.StatusBadRequest, parseErr.Error())
 		return
 	}
 
@@ -54,7 +54,7 @@ func (h *GourmetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	body, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		writeErrorJSON(w, http.StatusInternalServerError, "サービスが一時的に利用できません")
 		return
 	}
 
