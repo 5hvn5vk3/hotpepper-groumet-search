@@ -7,9 +7,12 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"backend/internal/types"
 )
 
 func TestParseParams_ValidationErrors(t *testing.T) {
+	// service はバリデーション失敗パスしか通らないため nil のままで安全
 	h := &GourmetHandler{}
 
 	testCases := []struct {
@@ -26,6 +29,13 @@ func TestParseParams_ValidationErrors(t *testing.T) {
 			name: "lat only",
 			query: url.Values{
 				"lat": []string{"35.0"},
+			},
+			wantContains: "lat and lng must be provided together",
+		},
+		{
+			name: "lng only",
+			query: url.Values{
+				"lng": []string{"139.0"},
 			},
 			wantContains: "lat and lng must be provided together",
 		},
@@ -116,6 +126,7 @@ func TestParseParams_ValidationErrors(t *testing.T) {
 }
 
 func TestHandle_BadRequestReturnsJSON(t *testing.T) {
+	// service はバリデーション失敗パスしか通らないため nil のままで安全
 	h := &GourmetHandler{}
 
 	rec := httptest.NewRecorder()
@@ -143,5 +154,63 @@ func TestHandle_BadRequestReturnsJSON(t *testing.T) {
 	}
 	if _, ok := errorObj["message"]; !ok {
 		t.Fatalf("missing error.message in response: %#v", body)
+	}
+}
+
+func TestParseParams_ValidCases(t *testing.T) {
+	h := &GourmetHandler{}
+
+	testCases := []struct {
+		name  string
+		query url.Values
+		want  types.GourmetSearchParams
+	}{
+		{
+			name: "lat/lng only",
+			query: url.Values{
+				"lat": []string{"35.6895"},
+				"lng": []string{"139.6917"},
+			},
+			want: types.GourmetSearchParams{Lat: 35.6895, Lng: 139.6917, Start: 1, Count: 20},
+		},
+		{
+			name: "keyword only",
+			query: url.Values{
+				"keyword": []string{"寿司"},
+			},
+			want: types.GourmetSearchParams{Keyword: "寿司", Start: 1, Count: 20},
+		},
+		{
+			name: "lat/lng with range",
+			query: url.Values{
+				"lat":   []string{"35.0"},
+				"lng":   []string{"139.0"},
+				"range": []string{"3"},
+			},
+			want: types.GourmetSearchParams{Lat: 35.0, Lng: 139.0, Range: 3, Start: 1, Count: 20},
+		},
+		{
+			name: "keyword with start and count",
+			query: url.Values{
+				"keyword": []string{"ラーメン"},
+				"start":   []string{"11"},
+				"count":   []string{"5"},
+			},
+			want: types.GourmetSearchParams{Keyword: "ラーメン", Start: 11, Count: 5},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/?"+tc.query.Encode(), nil)
+
+			got, err := h.parseParams(r)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("parseParams() = %+v, want %+v", got, tc.want)
+			}
+		})
 	}
 }

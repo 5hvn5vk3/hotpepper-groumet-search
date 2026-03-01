@@ -45,13 +45,13 @@ func TestSearchGourmet_NetworkAndFormatErrors(t *testing.T) {
 
 	t.Run("timeout", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"results":{"shop":[]}}`))
 		}))
 		defer server.Close()
 
-		svc := newTestService(server.URL, 5*time.Millisecond)
+		svc := newTestService(server.URL, 50*time.Millisecond)
 		_, err := svc.SearchGourmet(types.GourmetSearchParams{Keyword: "sushi"})
 		if err == nil {
 			t.Fatal("expected error, got nil")
@@ -76,6 +76,58 @@ func TestSearchGourmet_NetworkAndFormatErrors(t *testing.T) {
 			t.Fatalf("expected fetch error, got: %v", err)
 		}
 	})
+}
+
+func TestSearchGourmet_ClampStartAndCount(t *testing.T) {
+	testCases := []struct {
+		name       string
+		start      int
+		count      int
+		wantStart  string
+		wantCount  string
+	}{
+		{
+			name:      "start below min is clamped to 1",
+			start:     0,
+			count:     10,
+			wantStart: "1",
+			wantCount: "10",
+		},
+		{
+			name:      "count above max is clamped to 100",
+			start:     1,
+			count:     200,
+			wantStart: "1",
+			wantCount: "100",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotStart, gotCount string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotStart = r.URL.Query().Get("start")
+				gotCount = r.URL.Query().Get("count")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"results":{"shop":[]}}`))
+			}))
+			defer server.Close()
+
+			svc := newTestService(server.URL, time.Second)
+			_, _ = svc.SearchGourmet(types.GourmetSearchParams{
+				Keyword: "sushi",
+				Start:   tc.start,
+				Count:   tc.count,
+			})
+
+			if gotStart != tc.wantStart {
+				t.Fatalf("start = %q, want %q", gotStart, tc.wantStart)
+			}
+			if gotCount != tc.wantCount {
+				t.Fatalf("count = %q, want %q", gotCount, tc.wantCount)
+			}
+		})
+	}
 }
 
 func TestSearchGourmet_HotpepperAPIError(t *testing.T) {
