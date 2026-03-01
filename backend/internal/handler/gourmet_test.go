@@ -72,6 +72,14 @@ func TestParseParams_ValidationErrors(t *testing.T) {
 			wantContains: "lng must be a finite number",
 		},
 		{
+			name: "lng not number",
+			query: url.Values{
+				"lat": []string{"35.0"},
+				"lng": []string{"abc"},
+			},
+			wantContains: "lng must be a number",
+		},
+		{
 			name: "range out of bounds",
 			query: url.Values{
 				"lat":   []string{"35.0"},
@@ -128,6 +136,7 @@ func TestParseParams_ValidationErrors(t *testing.T) {
 func TestHandle_BadRequestReturnsJSON(t *testing.T) {
 	// service はバリデーション失敗パスしか通らないため nil のままで安全
 	h := &GourmetHandler{}
+	wantMessage := "either lat/lng, address, or keyword must be provided"
 
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -152,8 +161,12 @@ func TestHandle_BadRequestReturnsJSON(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing error object in response: %#v", body)
 	}
-	if _, ok := errorObj["message"]; !ok {
+	gotMessage, ok := errorObj["message"].(string)
+	if !ok {
 		t.Fatalf("missing error.message in response: %#v", body)
+	}
+	if gotMessage != wantMessage {
+		t.Fatalf("error.message = %q, want %q", gotMessage, wantMessage)
 	}
 }
 
@@ -179,6 +192,20 @@ func TestParseParams_ValidCases(t *testing.T) {
 				"keyword": []string{"寿司"},
 			},
 			want: types.GourmetSearchParams{Keyword: "寿司", Start: 1, Count: 20},
+		},
+		{
+			name: "address only",
+			query: url.Values{
+				"address": []string{"  渋谷  "},
+			},
+			want: types.GourmetSearchParams{Address: "渋谷", Start: 1, Count: 20},
+		},
+		{
+			name: "keyword is trimmed",
+			query: url.Values{
+				"keyword": []string{"  ランチ  "},
+			},
+			want: types.GourmetSearchParams{Keyword: "ランチ", Start: 1, Count: 20},
 		},
 		{
 			name: "lat/lng with range",

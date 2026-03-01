@@ -83,6 +83,14 @@ func TestHandleServiceError_MasksAPIKeyInLog(t *testing.T) {
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 	}
+
+	var body map[string]map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode response JSON: %v", err)
+	}
+	if got := body["error"]["message"]; got != "サービスが一時的に利用できません" {
+		t.Fatalf("message = %q, want %q", got, "サービスが一時的に利用できません")
+	}
 }
 
 func TestHandleServiceError_HotpepperCodeMapping(t *testing.T) {
