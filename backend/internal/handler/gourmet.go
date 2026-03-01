@@ -81,6 +81,9 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 	if parseErr != nil {
 		return types.GourmetSearchParams{}, parseErr
 	}
+	if rng != 0 && (rng < 1 || rng > 5) {
+		return types.GourmetSearchParams{}, &ValidationError{Message: "range must be 1, 2, 3, 4, or 5"}
+	}
 
 	start, parseErr := parseOptionalIntStrict("start", query.Get("start"), 1)
 	if parseErr != nil {
@@ -93,6 +96,10 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 	}
 
 	hasLocation := lat != 0 && lng != 0
+	if rng != 0 && !hasLocation {
+		return types.GourmetSearchParams{}, &ValidationError{Message: "range requires lat and lng"}
+	}
+
 	hasAddress := address != ""
 	hasKeyword := keyword != ""
 	if !hasLocation && !hasAddress && !hasKeyword {
