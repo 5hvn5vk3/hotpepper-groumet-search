@@ -66,7 +66,7 @@ func TestSearchGourmet_NetworkAndFormat(t *testing.T) {
 	t.Run("タイムアウト_failedToFetchAPI", func(t *testing.T) {
 		svc := newTestService(roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			select {
-			case <-time.After(200 * time.Millisecond): // クライアントのタイムアウトより長く待つ
+			case <-time.After(500 * time.Millisecond): // クライアントのタイムアウトより長く待つ
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(strings.NewReader(`{"results":{}}`)),
@@ -75,7 +75,7 @@ func TestSearchGourmet_NetworkAndFormat(t *testing.T) {
 			case <-req.Context().Done():
 				return nil, req.Context().Err()
 			}
-		}), 5*time.Millisecond) // 5ms で即タイムアウト
+		}), 50*time.Millisecond) // 50ms で即タイムアウト
 		_, err := svc.SearchGourmet(types.GourmetSearchParams{Keyword: "test"})
 
 		if err == nil {
@@ -87,13 +87,7 @@ func TestSearchGourmet_NetworkAndFormat(t *testing.T) {
 	})
 
 	t.Run("通信失敗_failedToFetchAPI", func(t *testing.T) {
-		svc := &HotpepperService{
-			apiKey:  "test-key",
-			baseURL: "http://dummy",
-			client: &http.Client{
-				Transport: errorTransport{err: errors.New("connection refused")},
-			},
-		}
+		svc := newTestService(errorTransport{err: errors.New("connection refused")}, 5*time.Second)
 		_, err := svc.SearchGourmet(types.GourmetSearchParams{Keyword: "test"})
 
 		if err == nil {
@@ -129,5 +123,48 @@ func TestSearchGourmet_HotpepperAPIError(t *testing.T) {
 	}
 	if apiErr.Code != 3000 {
 		t.Errorf("Code=3000 を期待したが Code=%d だった", apiErr.Code)
+	}
+}
+
+// TestSearchGourmet_ClampStartAndCount は clampInt による start/count の補正を検証する。
+// start=0 → 1、count=200 → 100 に補正されることを、実際に送信される HTTP クエリパラメータで確認する。
+func TestSearchGourmet_ClampStartAndCount(t *testing.T) {
+	testCases := []struct {
+		name      string
+		start     int
+		count     int
+		wantStart string
+		wantCount string
+	}{
+		{name: "start=0 は 1 にクランプ", start: 0, count: 10, wantStart: "1", wantCount: "10"},
+		{name: "count=200 は 100 にクランプ", start: 1, count: 200, wantStart: "1", wantCount: "100"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotStart, gotCount string
+			svc := newTestService(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				gotStart = req.URL.Query().Get("start")
+				gotCount = req.URL.Query().Get("count")
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"results":{"shop":[]}}`)),
+					Header:     make(http.Header),
+				}, nil
+			}), 5*time.Second)
+
+			_, _ = svc.SearchGourmet(types.GourmetSearchParams{
+				Keyword: "test",
+				Start:   tc.start,
+				Count:   tc.count,
+			})
+
+			if gotStart != tc.wantStart {
+				t.Errorf("start = %q, want %q", gotStart, tc.wantStart)
+			}
+			if gotCount != tc.wantCount {
+				t.Errorf("count = %q, want %q", gotCount, tc.wantCount)
+			}
+		})
 	}
 }

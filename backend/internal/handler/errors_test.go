@@ -46,6 +46,11 @@ func TestMaskAPIKeyInLog(t *testing.T) {
 			err:  fmt.Errorf("url?key=A+B/C&lat=35"),
 			want: "url?key=[REDACTED]&lat=35",
 		},
+		{
+			name: "key のみのパラメータ",
+			err:  fmt.Errorf("url?key=SECRET"),
+			want: "url?key=[REDACTED]",
+		},
 	}
 
 	for _, tc := range tests {

@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"backend/internal/types"
 )
 
 // TestParseParams は 3-a のテスト。
@@ -26,6 +28,11 @@ func TestParseParams(t *testing.T) {
 		{
 			name:       "lat のみ指定（lng なし）",
 			params:     map[string]string{"lat": "35.0"},
+			wantErrMsg: "lat and lng must be provided together",
+		},
+		{
+			name:       "lng のみ指定（lat なし）",
+			params:     map[string]string{"lng": "139.0"},
 			wantErrMsg: "lat and lng must be provided together",
 		},
 		{
@@ -128,5 +135,56 @@ func TestHandle_ValidationError(t *testing.T) {
 	}
 	if got := errObj["message"]; got != wantMessage {
 		t.Errorf("error.message = %q, want %q", got, wantMessage)
+	}
+}
+
+// TestParseParams_ValidCases は parseParams の正常系テスト。
+// 正しい入力が正しく GourmetSearchParams に変換されることを検証する。
+func TestParseParams_ValidCases(t *testing.T) {
+	h := &GourmetHandler{} // service は nil のまま
+
+	testCases := []struct {
+		name   string
+		params map[string]string
+		want   types.GourmetSearchParams
+	}{
+		{
+			name:   "lat/lng のみ",
+			params: map[string]string{"lat": "35.6895", "lng": "139.6917"},
+			want:   types.GourmetSearchParams{Lat: 35.6895, Lng: 139.6917, Start: 1, Count: 20},
+		},
+		{
+			name:   "keyword のみ",
+			params: map[string]string{"keyword": "寿司"},
+			want:   types.GourmetSearchParams{Keyword: "寿司", Start: 1, Count: 20},
+		},
+		{
+			name:   "lat/lng と range",
+			params: map[string]string{"lat": "35.0", "lng": "139.0", "range": "3"},
+			want:   types.GourmetSearchParams{Lat: 35.0, Lng: 139.0, Range: 3, Start: 1, Count: 20},
+		},
+		{
+			name:   "keyword と start/count",
+			params: map[string]string{"keyword": "ラーメン", "start": "11", "count": "5"},
+			want:   types.GourmetSearchParams{Keyword: "ラーメン", Start: 11, Count: 5},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			q := url.Values{}
+			for k, v := range tc.params {
+				q.Set(k, v)
+			}
+			r := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+
+			got, err := h.parseParams(r)
+			if err != nil {
+				t.Fatalf("予期しないエラーが返った: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("parseParams() = %+v, want %+v", got, tc.want)
+			}
+		})
 	}
 }
