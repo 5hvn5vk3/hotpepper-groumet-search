@@ -43,8 +43,8 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 		queryParams.Set("lat", strconv.FormatFloat(params.Lat, 'f', -1, 64))
 		queryParams.Set("lng", strconv.FormatFloat(params.Lng, 'f', -1, 64))
 		if params.Range > 0 {
-
-			queryParams.Set("range", strconv.Itoa(params.Range))
+			rangeValue := clampInt(params.Range, 1, 5)
+			queryParams.Set("range", strconv.Itoa(rangeValue))
 		}
 	}
 
