@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -143,10 +144,16 @@ func parseLatLngStrict(latStr, lngStr string) (float64, float64, error) {
 	if err != nil {
 		return 0, 0, &ValidationError{Message: "lat must be a number"}
 	}
+	if math.IsNaN(lat) || math.IsInf(lat, 0) {
+		return 0, 0, &ValidationError{Message: "lat must be a finite number"}
+	}
 
 	lng, err := strconv.ParseFloat(lngTrimmed, 64)
 	if err != nil {
 		return 0, 0, &ValidationError{Message: "lng must be a number"}
+	}
+	if math.IsNaN(lng) || math.IsInf(lng, 0) {
+		return 0, 0, &ValidationError{Message: "lng must be a finite number"}
 	}
 
 	return lat, lng, nil
