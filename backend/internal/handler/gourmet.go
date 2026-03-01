@@ -68,29 +68,28 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 
 	query := r.URL.Query()
 
-	latStr := query.Get("lat")
-	lngStr := query.Get("lng")
-	rangeStr := query.Get("range")
 	address := strings.TrimSpace(query.Get("address"))
 	keyword := strings.TrimSpace(query.Get("keyword"))
 
-	var lat, lng float64
-	var rng int
-
-	if latStr != "" && lngStr != "" {
-		if v, err := strconv.ParseFloat(latStr, 64); err == nil {
-			lat = v
-		}
-		if v, err := strconv.ParseFloat(lngStr, 64); err == nil {
-			lng = v
-		}
-	}
-	if rangeStr != "" {
-		rng = parseIntOrDefault(rangeStr, 0)
+	lat, lng, parseErr := parseLatLngStrict(query.Get("lat"), query.Get("lng"))
+	if parseErr != nil {
+		return types.GourmetSearchParams{}, parseErr
 	}
 
-	start := parseIntOrDefault(query.Get("start"), 1)
-	count := parseIntOrDefault(query.Get("count"), 20)
+	rng, parseErr := parseOptionalIntStrict("range", query.Get("range"), 0)
+	if parseErr != nil {
+		return types.GourmetSearchParams{}, parseErr
+	}
+
+	start, parseErr := parseOptionalIntStrict("start", query.Get("start"), 1)
+	if parseErr != nil {
+		return types.GourmetSearchParams{}, parseErr
+	}
+
+	count, parseErr := parseOptionalIntStrict("count", query.Get("count"), 20)
+	if parseErr != nil {
+		return types.GourmetSearchParams{}, parseErr
+	}
 
 	hasLocation := lat != 0 && lng != 0
 	hasAddress := address != ""
@@ -111,16 +110,44 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 	}, nil
 }
 
-func parseIntOrDefault(value string, fallback int) int {
-
-	if value == "" {
-		return fallback
+func parseOptionalIntStrict(name, value string, fallback int) (int, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return fallback, nil
 	}
 
-	if v, err := strconv.Atoi(value); err == nil {
-
-		return v
+	parsed, err := strconv.Atoi(trimmed)
+	if err != nil {
+		return 0, &ValidationError{Message: name + " must be an integer"}
 	}
 
-	return fallback
+	return parsed, nil
+}
+
+func parseLatLngStrict(latStr, lngStr string) (float64, float64, error) {
+	latTrimmed := strings.TrimSpace(latStr)
+	lngTrimmed := strings.TrimSpace(lngStr)
+
+	hasLat := latTrimmed != ""
+	hasLng := lngTrimmed != ""
+
+	if hasLat != hasLng {
+		return 0, 0, &ValidationError{Message: "lat and lng must be provided together"}
+	}
+
+	if !hasLat {
+		return 0, 0, nil
+	}
+
+	lat, err := strconv.ParseFloat(latTrimmed, 64)
+	if err != nil {
+		return 0, 0, &ValidationError{Message: "lat must be a number"}
+	}
+
+	lng, err := strconv.ParseFloat(lngTrimmed, 64)
+	if err != nil {
+		return 0, 0, &ValidationError{Message: "lng must be a number"}
+	}
+
+	return lat, lng, nil
 }
