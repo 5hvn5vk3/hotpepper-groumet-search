@@ -14,9 +14,9 @@ import (
 // service が nil のまま GourmetHandler を生成できる。
 func TestParseParams(t *testing.T) {
 	tests := []struct {
-		name        string
-		params      map[string]string
-		wantErrMsg  string
+		name       string
+		params     map[string]string
+		wantErrMsg string
 	}{
 		{
 			name:       "全パラメータ未指定",
@@ -94,6 +94,8 @@ func TestParseParams(t *testing.T) {
 // TestHandle_ValidationError は 3-b のテスト。
 // Handle が全パラメータ未指定のリクエストに対して 400 と JSON エラーを返すことを検証する。
 func TestHandle_ValidationError(t *testing.T) {
+	wantMessage := "either lat/lng, address, or keyword must be provided"
+
 	// ① recorder と全パラメータ未指定リクエストを準備
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -123,5 +125,8 @@ func TestHandle_ValidationError(t *testing.T) {
 	}
 	if _, ok := errObj["message"]; !ok {
 		t.Errorf("error オブジェクトに 'message' キーが存在しない: %v", errObj)
+	}
+	if got := errObj["message"]; got != wantMessage {
+		t.Errorf("error.message = %q, want %q", got, wantMessage)
 	}
 }

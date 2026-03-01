@@ -2,8 +2,8 @@ package service
 
 import (
 	"errors"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,13 +11,26 @@ import (
 	"backend/internal/types"
 )
 
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
 // newTestService はテスト用の HotpepperService を生成するヘルパー。
-// 本物の API サーバーの代わりに偽サーバーの URL を注入できる。
-func newTestService(serverURL string, timeout time.Duration) *HotpepperService {
+// 実 HTTP サーバーを立てず、RoundTripper でレスポンスを差し替える。
+func newTestService(transport http.RoundTripper, timeout time.Duration) *HotpepperService {
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+
 	return &HotpepperService{
 		apiKey:  "test-key",
-		baseURL: serverURL,
-		client:  &http.Client{Timeout: timeout},
+		baseURL: "http://example.test",
+		client: &http.Client{
+			Timeout:   timeout,
+			Transport: transport,
+		},
 	}
 }
 
@@ -33,13 +46,13 @@ func (t errorTransport) RoundTrip(*http.Request) (*http.Response, error) {
 // 不正 JSON・タイムアウト・通信失敗の 3 パターンを検証する。
 func TestSearchGourmet_NetworkAndFormat(t *testing.T) {
 	t.Run("不正JSON_failedToDecodeResponse", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"broken":`)) // 閉じていない不正 JSON
-		}))
-		defer ts.Close()
-
-		svc := newTestService(ts.URL, 5*time.Second)
+		svc := newTestService(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"broken":`)), // 閉じていない不正 JSON
+				Header:     make(http.Header),
+			}, nil
+		}), 5*time.Second)
 		_, err := svc.SearchGourmet(types.GourmetSearchParams{Keyword: "test"})
 
 		if err == nil {
@@ -51,14 +64,18 @@ func TestSearchGourmet_NetworkAndFormat(t *testing.T) {
 	})
 
 	t.Run("タイムアウト_failedToFetchAPI", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			time.Sleep(200 * time.Millisecond) // クライアントのタイムアウトより長く待つ
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"results":{}}`))
-		}))
-		defer ts.Close()
-
-		svc := newTestService(ts.URL, 5*time.Millisecond) // 5ms で即タイムアウト
+		svc := newTestService(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			select {
+			case <-time.After(200 * time.Millisecond): // クライアントのタイムアウトより長く待つ
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"results":{}}`)),
+					Header:     make(http.Header),
+				}, nil
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			}
+		}), 5*time.Millisecond) // 5ms で即タイムアウト
 		_, err := svc.SearchGourmet(types.GourmetSearchParams{Keyword: "test"})
 
 		if err == nil {
@@ -91,13 +108,15 @@ func TestSearchGourmet_NetworkAndFormat(t *testing.T) {
 // TestSearchGourmet_HotpepperAPIError は 1-b のテスト。
 // API が HTTP 200 で error フィールドを返した場合に *types.HotpepperAPIError が返ることを確認する。
 func TestSearchGourmet_HotpepperAPIError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"results":{"error":[{"code":3000,"message":"パラメータ不正"}]}}`))
-	}))
-	defer ts.Close()
-
-	svc := newTestService(ts.URL, 5*time.Second)
+	svc := newTestService(roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body: io.NopCloser(strings.NewReader(
+				`{"results":{"error":[{"code":3000,"message":"パラメータ不正"}]}}`,
+			)),
+			Header: make(http.Header),
+		}, nil
+	}), 5*time.Second)
 	_, err := svc.SearchGourmet(types.GourmetSearchParams{Keyword: "test"})
 
 	if err == nil {
