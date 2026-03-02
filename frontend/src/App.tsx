@@ -199,7 +199,7 @@ function App() {
       <AppHeader />
 
       <main
-        className="container mx-auto px-4 py-8"
+        className="container mx-auto px-4 py-1"
         style={
           hasPagination
             ? { paddingBottom: `calc(2rem + ${reservedBottomSpace}px)` }
@@ -215,7 +215,7 @@ function App() {
         />
 
         {hasSearched && (
-          <div className="sticky top-0 z-20 mb-6 rounded-lg bg-gray-100/95 py-2 backdrop-blur-sm">
+          <div className="sticky top-0 z-20 rounded-lg bg-gray-100/95 py-2 backdrop-blur-sm">
             <GenreTabs
               genres={genres}
               selectedGenre={selectedGenre}
