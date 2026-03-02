@@ -1,0 +1,561 @@
+openapi: 3.0.3
+info:
+  title: Hotpepper グルメ検索 バックエンドAPI
+  version: 1.0.0
+  description: |
+    この仕様書は、このリポジトリで実装されているバックエンドAPIを定義します。
+    バックエンドは HotPepper Web Service の一部エンドポイントをプロキシし、
+    フロントエンド向けに入力検証とエラーレスポンスを統一します。
+
+    ## 起動時の環境変数
+
+    | 変数名 | 必須 | デフォルト | 説明 |
+    |---|---|---|---|
+    | `HOTPEPPER_API_KEY` | ✅ | なし | HotPepper Web Service の API キー |
+    | `PORT` | | `8080` | サーバーがリッスンするポート番号 |
+    | `ALLOWED_ORIGIN` | | `http://localhost:3000` | CORS で許可するオリジン |
+
+    ### `ALLOWED_ORIGIN` の設定例
+
+    | 用途 | 設定値 |
+    |---|---|
+    | フロントエンド開発（デフォルト） | `http://localhost:3000` |
+    | 本番環境 | フロントエンドのオリジン（例: `https://example.com`） |
+    | **開発時の動作確認（Swagger UI preview 等）** | `*` |
+
+    > ⚠️ `ALLOWED_ORIGIN=*` はすべてのオリジンからのアクセスを許可します。
+    > Swagger UI preview（VS Code）のオリジンは `vscode-webview://〈動的ID〉` 形式で
+    > 起動ごとに変わるため固定指定が不可能であり、`*` が唯一の対応策です。
+    > **本番環境では絶対に使用しないでください。**
+
+servers:
+  - url: http://localhost:8080
+    description: ローカル開発サーバー
+
+tags:
+  - name: Gourmet
+  - name: Genre
+
+paths:
+  /api/gourmet:
+    get:
+      tags: [Gourmet]
+      summary: 飲食店検索
+      description: |
+        HotPepper グルメサーチAPI（`/gourmet/v1/`）を利用して店舗を検索します。
+        バックエンドは HotPepper 側へ常に `format=json` と `type=lite+credit_card` を送信します。
+      parameters:
+        - name: address
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 住所のフリーテキスト。
+        - name: genre
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "ジャンルコード（例: `G001`）。"
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: キーワードのフリーテキスト。
+        - name: lat
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+          description: 緯度。`lng` と同時に指定する必要があります。
+        - name: lng
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+          description: 経度。`lat` と同時に指定する必要があります。
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum: [1, 2, 3, 4, 5]
+          description: |
+            検索半径レベル。`lat` と `lng` が指定されている場合のみ利用できます。
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 1
+          description: |
+            1始まりの開始位置。バックエンド既定値は `1` で、`1..1000` に丸め込みます。
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: |
+            1ページあたりの取得件数。バックエンド既定値は `20` で、`1..100` に丸め込みます。
+      x-validation-rules:
+        - "(lat と lng)・address・keyword のいずれか1つ以上の指定が必要です。"
+        - "lat と lng は同時に指定する必要があります。"
+        - "lat と lng は有限数（NaN・Inf 不可）である必要があります。"
+        - "range を指定する場合は lat と lng が必須です。"
+        - "range は 1〜5 の整数値でなければなりません（範囲外は 400）。"
+        - "start・count・range に非整数値を指定した場合は 400 を返します。"
+      responses:
+        "200":
+          description: 検索成功レスポンス
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GourmetSearchResponse"
+        "400":
+          description: |
+            バックエンドの入力検証エラー、または HotPepper 上流エラーコード `3000`。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missing_search_condition:
+                  summary: 検索条件が何も指定されていない
+                  value:
+                    error:
+                      message: either lat/lng, address, or keyword must be provided
+                lat_lng_partial:
+                  summary: lat か lng の片方のみ指定した
+                  value:
+                    error:
+                      message: lat and lng must be provided together
+                lat_not_number:
+                  summary: lat が数値として解析不能
+                  value:
+                    error:
+                      message: lat must be a number
+                lat_not_finite:
+                  summary: lat が NaN または Inf
+                  value:
+                    error:
+                      message: lat must be a finite number
+                lng_not_number:
+                  summary: lng が数値として解析不能
+                  value:
+                    error:
+                      message: lng must be a number
+                lng_not_finite:
+                  summary: lng が NaN または Inf
+                  value:
+                    error:
+                      message: lng must be a finite number
+                range_invalid_value:
+                  summary: range が 1〜5 の範囲外
+                  value:
+                    error:
+                      message: range must be 1, 2, 3, 4, or 5
+                range_without_location:
+                  summary: range 指定時に lat/lng が未指定
+                  value:
+                    error:
+                      message: range requires lat and lng
+                range_not_integer:
+                  summary: range に非整数値を指定
+                  value:
+                    error:
+                      message: range must be an integer
+                start_not_integer:
+                  summary: start に非整数値を指定
+                  value:
+                    error:
+                      message: start must be an integer
+                count_not_integer:
+                  summary: count に非整数値を指定
+                  value:
+                    error:
+                      message: count must be an integer
+                upstream_3000:
+                  summary: HotPepper 上流エラーコード 3000
+                  value:
+                    error:
+                      message: 検索条件が正しくありません
+        "405":
+          description: 許可されていないHTTPメソッド（`GET` のみ）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: Method not allowed
+        "500":
+          description: |
+            サーバー内部エラー、JSONシリアライズ失敗、または HotPepper 上流エラーコード `2000`。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: サービスが一時的に利用できません
+        "502":
+          description: HotPepper 上流エラーコード `1000`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: サービスが一時的に利用できません
+
+  /api/gourmet/detail:
+    get:
+      tags: [Gourmet]
+      summary: 店舗詳細補足情報の取得
+      description: |
+        HotPepper グルメサーチAPI（`/gourmet/v1/`）を使って店舗IDで1件取得し、
+        詳細モーダルで使う補足フィールドのみを返します。
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: HotPepper の店舗ID。
+      responses:
+        "200":
+          description: 店舗の補足詳細フィールド
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopDetailSupplement"
+        "400":
+          description: |
+            `id` の欠落・不正、または HotPepper 上流エラーコード `3000`。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missing_id:
+                  value:
+                    error:
+                      message: id is required
+                upstream_3000:
+                  value:
+                    error:
+                      message: 検索条件が正しくありません
+        "404":
+          description: 店舗が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: 店舗が見つかりません
+        "405":
+          description: 許可されていないHTTPメソッド（`GET` のみ）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: Method not allowed
+        "500":
+          description: |
+            サーバー内部エラー、JSONシリアライズ失敗、または HotPepper 上流エラーコード `2000`。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: サービスが一時的に利用できません
+        "502":
+          description: HotPepper 上流エラーコード `1000`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: サービスが一時的に利用できません
+
+  /api/genre:
+    get:
+      tags: [Genre]
+      summary: ジャンルマスタ取得
+      description: |
+        HotPepper ジャンルマスターAPI（`/genre/v1/`）からジャンル一覧を取得します。
+      responses:
+        "200":
+          description: ジャンルマスター一覧
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenreMasterResponse"
+        "400":
+          description: HotPepper 上流エラーコード `3000`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: 検索条件が正しくありません
+        "405":
+          description: 許可されていないHTTPメソッド（`GET` のみ）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: Method not allowed
+        "500":
+          description: |
+            サーバー内部エラー、JSONシリアライズ失敗、または HotPepper 上流エラーコード `2000`。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: サービスが一時的に利用できません
+        "502":
+          description: HotPepper 上流エラーコード `1000`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  message: サービスが一時的に利用できません
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          required: [message]
+          additionalProperties: false
+          properties:
+            message:
+              type: string
+
+    APIError:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+
+    GourmetSearchResponse:
+      type: object
+      required: [results]
+      additionalProperties: false
+      properties:
+        results:
+          $ref: "#/components/schemas/GourmetSearchResults"
+
+    GourmetSearchResults:
+      type: object
+      required: [api_version, results_available, results_returned, results_start, shop, error]
+      additionalProperties: false
+      properties:
+        api_version:
+          type: string
+        results_available:
+          type: integer
+        results_returned:
+          type: string
+          description: HotPepper APIレスポンス仕様に合わせて文字列型のまま保持します。
+        results_start:
+          type: integer
+        shop:
+          type: array
+          items:
+            $ref: "#/components/schemas/Shop"
+        error:
+          type: array
+          items:
+            $ref: "#/components/schemas/APIError"
+
+    Shop:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        open:
+          type: string
+        close:
+          type: string
+        genre:
+          $ref: "#/components/schemas/ShopGenre"
+        catch:
+          type: string
+        access:
+          type: string
+        budget_memo:
+          type: string
+        wifi:
+          type: string
+        private_room:
+          type: string
+        non_smoking:
+          type: string
+        parking:
+          type: string
+        lunch:
+          type: string
+        midnight:
+          type: string
+        shop_detail_memo:
+          type: string
+        urls:
+          $ref: "#/components/schemas/ShopURLs"
+        photo:
+          $ref: "#/components/schemas/ShopPhoto"
+        credit_card:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/ShopCreditCard"
+
+    ShopGenre:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        catch:
+          type: string
+
+    ShopURLs:
+      type: object
+      additionalProperties: false
+      properties:
+        pc:
+          type: string
+
+    ShopPhoto:
+      type: object
+      additionalProperties: false
+      properties:
+        pc:
+          $ref: "#/components/schemas/ShopPhotoPC"
+
+    ShopPhotoPC:
+      type: object
+      additionalProperties: false
+      properties:
+        l:
+          type: string
+        m:
+          type: string
+        s:
+          type: string
+
+    ShopCreditCard:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+
+    ShopDetailSupplement:
+      type: object
+      description: |
+        全フィールドに `omitempty` が付いているため、空文字のフィールドはJSONキーごと省略されます。
+        `required` フィールドはありません。
+      additionalProperties: false
+      properties:
+        open:
+          type: string
+        close:
+          type: string
+        budget_memo:
+          type: string
+        wifi:
+          type: string
+        private_room:
+          type: string
+        non_smoking:
+          type: string
+        parking:
+          type: string
+        lunch:
+          type: string
+        midnight:
+          type: string
+        shop_detail_memo:
+          type: string
+
+    GenreMasterResponse:
+      type: object
+      required: [results]
+      additionalProperties: false
+      properties:
+        results:
+          $ref: "#/components/schemas/GenreMasterResults"
+
+    GenreMasterResults:
+      type: object
+      required: [api_version, results_available, results_returned, results_start, genre, error]
+      additionalProperties: false
+      properties:
+        api_version:
+          type: string
+        results_available:
+          type: integer
+        results_returned:
+          type: string
+        results_start:
+          type: integer
+        genre:
+          type: array
+          items:
+            $ref: "#/components/schemas/Genre"
+        error:
+          type: array
+          items:
+            $ref: "#/components/schemas/APIError"
+
+    Genre:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+        name:
+          type: string

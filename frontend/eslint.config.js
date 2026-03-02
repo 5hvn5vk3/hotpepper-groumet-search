@@ -7,80 +7,70 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
-
 export default defineConfig([
-  globalIgnores(["dist"]),
-  {
-    files: ["**/*.{ts,tsx}"],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs["recommended-latest"],
-      reactRefresh.configs.vite,
-    ],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
+    globalIgnores(["dist"]),
+    {
+        files: ["**/*.{ts,tsx}"],
+        extends: [
+            js.configs.recommended,
+            tseslint.configs.recommended,
+            reactHooks.configs["recommended-latest"],
+            reactRefresh.configs.vite,
+        ],
+        languageOptions: {
+            ecmaVersion: 2020,
+            globals: globals.browser,
+            parserOptions: {
+                ecmaFeatures: {
+                    jsx: true,
+                },
+            },
         },
-      },
-    },
-    plugins: {
-      react,
-      "jsx-a11y": jsxA11y,
-      "unused-imports": unusedImports,
-    },
-    settings: {
-      react: {
-        version: "detect",
-      },
-    },
-    rules: {
-      // 未使用のimportを自動削除
-      "unused-imports/no-unused-imports": "error",
-      "unused-imports/no-unused-vars": [
-        "warn",
-        {
-          vars: "all",
-          varsIgnorePattern: "^_",
-          args: "after-used",
-          argsIgnorePattern: "^_",
+        plugins: {
+            react,
+            "jsx-a11y": jsxA11y,
+            "unused-imports": unusedImports,
         },
-      ],
-
-      // コードスタイルの統一（自動修正可能）
-      semi: ["error", "always"],
-      quotes: ["error", "single", { avoidEscape: true }],
-      "comma-dangle": ["error", "always-multiline"],
-      "no-multiple-empty-lines": ["error", { max: 1, maxEOF: 0 }],
-      "eol-last": ["error", "always"],
-      "no-trailing-spaces": "error",
-
-      // React関連
-      "react/jsx-uses-react": "off", // React 17+では不要
-      "react/react-in-jsx-scope": "off", // React 17+では不要
-      "react/prop-types": "off", // TypeScriptを使用するため
-      "react/jsx-curly-spacing": ["error", { when: "never", children: true }],
-      "react/jsx-tag-spacing": [
-        "error",
-        {
-          closingSlash: "never",
-          beforeSelfClosing: "always",
-          afterOpening: "never",
-          beforeClosing: "never",
+        settings: {
+            react: {
+                version: "detect",
+            },
         },
-      ],
-
-      // TypeScript関連
-      "@typescript-eslint/no-unused-vars": "off", // unused-importsを使用
-      "@typescript-eslint/explicit-module-boundary-types": "off",
-      "@typescript-eslint/no-explicit-any": "warn",
-
-      // アクセシビリティ（基本的なもののみ）
-      "jsx-a11y/alt-text": "warn",
-      "jsx-a11y/anchor-is-valid": "warn",
+        rules: {
+            "unused-imports/no-unused-imports": "error",
+            "unused-imports/no-unused-vars": [
+                "warn",
+                {
+                    vars: "all",
+                    varsIgnorePattern: "^_",
+                    args: "after-used",
+                    argsIgnorePattern: "^_",
+                },
+            ],
+            semi: ["error", "always"],
+            quotes: ["error", "single", { avoidEscape: true }],
+            "comma-dangle": ["error", "always-multiline"],
+            "no-multiple-empty-lines": ["error", { max: 1, maxEOF: 0 }],
+            "eol-last": ["error", "always"],
+            "no-trailing-spaces": "error",
+            "react/jsx-uses-react": "off",
+            "react/react-in-jsx-scope": "off",
+            "react/prop-types": "off",
+            "react/jsx-curly-spacing": ["error", { when: "never", children: true }],
+            "react/jsx-tag-spacing": [
+                "error",
+                {
+                    closingSlash: "never",
+                    beforeSelfClosing: "always",
+                    afterOpening: "never",
+                    beforeClosing: "never",
+                },
+            ],
+            "@typescript-eslint/no-unused-vars": "off",
+            "@typescript-eslint/explicit-module-boundary-types": "off",
+            "@typescript-eslint/no-explicit-any": "warn",
+            "jsx-a11y/alt-text": "warn",
+            "jsx-a11y/anchor-is-valid": "warn",
+        },
     },
-  },
 ]);

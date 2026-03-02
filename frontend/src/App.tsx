@@ -1,118 +1,194 @@
-// 各種コンポーネントをインポート
-// @/はプロジェクトのsrcディレクトリへのエイリアス（省略記法）
-import {
-  ErrorMessage, // エラーメッセージ表示コンポーネント
-  LoadingSpinner, // ローディング表示コンポーネント
-  Pagination, // ページネーションコンポーネント
-  RestaurantDetail, // レストラン詳細モーダルコンポーネント
-  RestaurantList, // レストラン一覧表示コンポーネント
-  SearchForm, // 検索フォームコンポーネント
-} from "@/components"; // コンポーネントのインデックスから一括インポート
-// TypeScript型定義をインポート
-import type { SearchParams, Shop } from "@/types";
-// カスタムフックをインポート
-import { useRestaurantSearch } from "@/hooks/useRestaurantSearch"; // レストラン検索ロジックを管理
-import { useModal } from "@/hooks/useModal"; // モーダルの開閉を管理
-// 定数をインポート
-import { ITEMS_PER_PAGE } from "@/constants"; // 1ページあたりの表示件数
-
-// Appコンポーネント：アプリケーション全体のメインコンポーネント
+import { AppHeader, ErrorMessage, GenreTabs, LoadingSpinner, Pagination, RestaurantDetail, RestaurantList, SearchForm, ScrollToTopButton, } from "@/components";
+import type { RestaurantDetailStatus, GourmetSearchParams, ShopDetailSupplement, ShopDetailView, ShopListItem } from "@/types";
+import { useGenres } from "@/hooks/useGenres";
+import { useRestaurantSearch } from "@/hooks/useRestaurantSearch";
+import { useModal } from "@/hooks/useModal";
+import { fetchRestaurantDetail } from "@/api/restaurantApi";
+import type { SearchFormState } from "@/components/SearchForm";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ITEMS_PER_PAGE } from "@/constants";
 function App() {
-  // useRestaurantSearchフック：レストラン検索の状態とロジックを管理
-  // 分割代入で必要な値と関数を取り出す
-  const {
-    searchResult, // 検索結果データ
-    isLoading, // ローディング中かどうかのフラグ
-    hasSearched, // 検索が実行されたかどうかのフラグ
-    error, // エラーメッセージ
-    currentPage, // 現在のページ番号
-    search, // 検索を実行する関数
-    changePage, // ページを変更する関数
-    clearError, // エラーをクリアする関数
-  } = useRestaurantSearch(ITEMS_PER_PAGE);
+    const { searchResult, isLoading, hasSearched, error, currentPage, search, changePage, clearError, } = useRestaurantSearch(ITEMS_PER_PAGE);
+    const { isOpen, data: selectedRestaurant, open, close } = useModal<ShopListItem>();
+    const [userLat, setUserLat] = useState<number | null>(null);
+    const [userLng, setUserLng] = useState<number | null>(null);
+    const [selectedGenre, setSelectedGenre] = useState("");
+    const [searchFormState, setSearchFormState] = useState<SearchFormState>({
+        address: "",
+        keyword: "",
+        lat: null,
+        lng: null,
+        range: 3,
+        hasStoredLocation: false,
+    });
+    const [detailRestaurant, setDetailRestaurant] = useState<ShopDetailSupplement | null>(null);
+    const [detailStatus, setDetailStatus] = useState<RestaurantDetailStatus>("idle");
+    const [fixedControlsHeight, setFixedControlsHeight] = useState(0);
+    const detailRequestIdRef = useRef(0);
+    const fixedControlsRef = useRef<HTMLDivElement | null>(null);
+    const { genres, isLoading: genresLoading, error: genresError, clearError: clearGenresError } = useGenres();
+    const modalRestaurant = useMemo<ShopDetailView | null>(() => {
+        if (!selectedRestaurant) {
+            return null;
+        }
+        if (!detailRestaurant) {
+            return selectedRestaurant;
+        }
+        return {
+            ...selectedRestaurant,
+            ...detailRestaurant,
+        };
+    }, [selectedRestaurant, detailRestaurant]);
+    const handleLocationChange = useCallback((lat: number, lng: number) => {
+        setUserLat(lat);
+        setUserLng(lng);
+    }, []);
+    const handleSearch = (params: GourmetSearchParams) => {
+        setSelectedGenre(params.genre ?? "");
+        search(params);
+    };
+    const handleSearchFormStateChange = useCallback((nextState: SearchFormState) => {
+        setSearchFormState((prevState) => {
+            const isUnchanged = prevState.address === nextState.address &&
+                prevState.keyword === nextState.keyword &&
+                prevState.lat === nextState.lat &&
+                prevState.lng === nextState.lng &&
+                prevState.range === nextState.range &&
+                prevState.hasStoredLocation === nextState.hasStoredLocation;
+            return isUnchanged ? prevState : nextState;
+        });
+    }, []);
+    const hasLocationContext = searchFormState.hasStoredLocation ||
+        (searchFormState.lat !== null && searchFormState.lng !== null);
+    const hasSearchText = searchFormState.address.trim() !== "" ||
+        searchFormState.keyword.trim() !== "";
+    const canUseGenreTabs = hasSearched &&
+        !isLoading &&
+        !genresLoading &&
+        (hasLocationContext || hasSearchText);
+    const handleGenreTabClick = (genreCode: string) => {
+        if (!canUseGenreTabs || selectedGenre === genreCode) {
+            return;
+        }
+        const trimmedAddress = searchFormState.address.trim();
+        const trimmedKeyword = searchFormState.keyword.trim();
+        const hasLocation = searchFormState.lat !== null && searchFormState.lng !== null;
+        const hasAddress = trimmedAddress !== "";
+        const hasKeyword = trimmedKeyword !== "";
+        if (!hasLocation && !hasAddress && !hasKeyword) {
+            return;
+        }
+        handleSearch({
+            address: hasAddress ? trimmedAddress : undefined,
+            genre: genreCode || undefined,
+            keyword: hasKeyword ? trimmedKeyword : undefined,
+            lat: hasLocation ? searchFormState.lat! : undefined,
+            lng: hasLocation ? searchFormState.lng! : undefined,
+            range: hasLocation ? searchFormState.range : undefined,
+        });
+    };
+    const handlePageChange = (page: number) => {
+        changePage(page);
+    };
+    const handleSelectRestaurant = async (restaurant: ShopListItem) => {
+        open(restaurant);
+        setDetailRestaurant(null);
+        setDetailStatus("loading");
+        const requestId = ++detailRequestIdRef.current;
+        try {
+            const detail = await fetchRestaurantDetail(restaurant.id);
+            if (detailRequestIdRef.current !== requestId) {
+                return;
+            }
+            if (!detail) {
+                setDetailStatus("failed");
+                return;
+            }
+            setDetailRestaurant(detail);
+            setDetailStatus("ready");
+        }
+        catch (detailError) {
+            if (detailRequestIdRef.current === requestId) {
+                setDetailStatus("failed");
+            }
+            console.error("Failed to fetch restaurant detail:", detailError);
+        }
+    };
+    const handleCloseRestaurantDetail = () => {
+        detailRequestIdRef.current += 1;
+        setDetailRestaurant(null);
+        setDetailStatus("idle");
+        close();
+    };
+    const hasPagination = searchResult !== null && searchResult.results_available > 0;
+    const reservedBottomSpace = hasPagination
+        ? Math.max(fixedControlsHeight, 224)
+        : 0;
+    useEffect(() => {
+        if (!hasPagination) {
+            setFixedControlsHeight(0);
+            return;
+        }
+        const controlsElement = fixedControlsRef.current;
+        if (!controlsElement) {
+            return;
+        }
+        const updateHeight = () => {
+            setFixedControlsHeight(controlsElement.getBoundingClientRect().height);
+        };
+        updateHeight();
+        if (typeof ResizeObserver === "undefined") {
+            window.addEventListener("resize", updateHeight);
+            return () => {
+                window.removeEventListener("resize", updateHeight);
+            };
+        }
+        const observer = new ResizeObserver(updateHeight);
+        observer.observe(controlsElement);
+        return () => {
+            observer.disconnect();
+        };
+    }, [hasPagination]);
+    return (<div className="min-h-screen bg-gray-100">
+      
+      <AppHeader />
 
-  // useModalフック：モーダル（詳細画面）の開閉状態を管理
-  // Shop型のデータを扱うモーダル
-  const { isOpen, data: selectedRestaurant, open, close } = useModal<Shop>();
+      
+      <main className="container mx-auto px-4 py-8" style={hasPagination
+            ? { paddingBottom: `calc(2rem + ${reservedBottomSpace}px)` }
+            : undefined}>
+        
+        <SearchForm onSearch={handleSearch} isLoading={isLoading} selectedGenre={selectedGenre} onLocationChange={handleLocationChange} onSearchStateChange={handleSearchFormStateChange}/>
 
-  // 検索フォームから検索が実行されたときのハンドラー関数
-  const handleSearch = (params: SearchParams) => {
-    // searchフックの関数を呼び出して検索を実行
-    search(params);
-  };
+        {hasSearched && (<div className="sticky top-0 z-20 mb-6 rounded-lg bg-gray-100/95 py-2 backdrop-blur-sm">
+            <GenreTabs genres={genres} selectedGenre={selectedGenre} canUseGenreTabs={canUseGenreTabs} onGenreTabClick={handleGenreTabClick}/>
+          </div>)}
 
-  // ページ変更ボタンがクリックされたときのハンドラー関数
-  const handlePageChange = (page: number) => {
-    // changePageフックの関数を呼び出してページを変更
-    changePage(page);
-  };
+        
+        {error && <ErrorMessage message={error} onClose={clearError}/>}
+        {genresError && <ErrorMessage message={genresError} onClose={clearGenresError}/>}
 
-  // レストランカードがクリックされたときのハンドラー関数
-  const handleSelectRestaurant = (restaurant: Shop) => {
-    // モーダルを開き、選択されたレストランのデータを渡す
-    open(restaurant);
-  };
-
-  // JSXを返す：画面に表示するHTML風の構造
-  return (
-    // 最小高さを画面全体に、背景色をグレーに設定
-    <div className="min-h-screen bg-gray-100">
-      {/* ヘッダー部分：青い背景で影付き */}
-      <header className="bg-blue-600 text-white py-6 shadow-lg">
-        {/* コンテナ：最大幅を設定し、中央揃え */}
-        <div className="container mx-auto px-4">
-          {/* タイトル：大きな太字で表示 */}
-          <h1 className="text-3xl font-bold">ホットペッパー レストラン検索</h1>
-        </div>
-      </header>
-
-      {/* メインコンテンツエリア */}
-      <main className="container mx-auto px-4 py-8">
-        {/* 検索フォームコンポーネント
-            onSearch: 検索実行時のコールバック関数
-            isLoading: ローディング中は検索ボタンを無効化 */}
-        <SearchForm onSearch={handleSearch} isLoading={isLoading} />
-
-        {/* 条件付きレンダリング：エラーがある場合のみ表示
-            &&演算子は左側がtrueの場合に右側を評価・レンダリング */}
-        {error && <ErrorMessage message={error} onClose={clearError} />}
-
-        {/* ローディング中の場合、スピナーを表示 */}
+        
         {isLoading && <LoadingSpinner />}
 
-        {/* ローディング中でなく、かつ検索が実行済みの場合、結果を表示
-            !isLoadingはisLoadingがfalseであることを意味 */}
-        {!isLoading && hasSearched && (
-          <RestaurantList
-            // searchResult?.shop: オプショナルチェイニング（searchResultがnullの場合エラーにならない）
-            // ?? []: Null合体演算子（左側がnullまたはundefinedの場合、右側の空配列を使用）
-            restaurants={searchResult?.shop ?? []}
-            onSelectRestaurant={handleSelectRestaurant}
-          />
-        )}
+        
+        {!isLoading && hasSearched && (<RestaurantList restaurants={searchResult?.shop ?? []} onSelectRestaurant={handleSelectRestaurant} userLat={userLat ?? undefined} userLng={userLng ?? undefined}/>)}
 
-        {/* 検索結果があり、かつ結果件数が1件以上の場合、ページネーションを表示 */}
-        {searchResult && searchResult.results_available > 0 && (
-          <Pagination
-            currentPage={currentPage} // 現在のページ番号
-            totalCount={searchResult.results_available} // 総件数
-            count={ITEMS_PER_PAGE} // 1ページあたりの件数
-            onPageChange={handlePageChange} // ページ変更時の処理
-            disabled={isLoading} // ローディング中は無効化
-            start={searchResult.results_start} // 表示開始位置
-            available={searchResult.results_available} // 総利用可能件数
-          />
-        )}
+        
       </main>
 
-      {/* モーダルが開いており、かつレストランが選択されている場合、詳細画面を表示 */}
-      {isOpen && selectedRestaurant && (
-        <RestaurantDetail restaurant={selectedRestaurant} onClose={close} />
-      )}
-    </div>
-  );
-}
+      
+      {hasPagination && searchResult && (<div ref={fixedControlsRef} className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 backdrop-blur-sm">
+          <div className="container mx-auto flex flex-col items-end gap-2">
+            <ScrollToTopButton />
+            <div className="w-full">
+              <Pagination currentPage={currentPage} totalCount={searchResult.results_available} count={ITEMS_PER_PAGE} onPageChange={handlePageChange} disabled={isLoading} start={searchResult.results_start} available={searchResult.results_available}/>
+            </div>
+          </div>
+        </div>)}
 
-// AppコンポーネントをエクスポートしてWの他のファイルから使用可能にする
-// defaultエクスポートは1ファイル1つのみ
+      
+      {isOpen && modalRestaurant && (<RestaurantDetail restaurant={modalRestaurant} detailStatus={detailStatus} onClose={handleCloseRestaurantDetail} userLat={userLat ?? undefined} userLng={userLng ?? undefined}/>)}
+    </div>);
+}
 export default App;

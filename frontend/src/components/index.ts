@@ -1,6 +1,9 @@
+export { AppHeader } from "./AppHeader";
 export { ErrorMessage } from "./ErrorMessage";
+export { GenreTabs } from "./GenreTabs";
 export { LoadingSpinner } from "./LoadingSpinner";
 export { Pagination } from "./Pagination";
 export { RestaurantDetail } from "./RestaurantDetail";
 export { RestaurantList } from "./RestaurantList";
 export { SearchForm } from "./SearchForm";
+export { ScrollToTopButton } from "./ScrollToTopButton";
