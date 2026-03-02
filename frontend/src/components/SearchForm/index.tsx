@@ -250,12 +250,7 @@ export const SearchForm: React.FC<SearchFormProps> = ({
     onSearchStateChange,
   ]);
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white shadow-md rounded-lg p-6 mb-6"
-    >
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">レストラン検索</h2>
-
+    <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <SearchRangeSelect
           range={range}
