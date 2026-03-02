@@ -28,6 +28,9 @@ export const GenreTabs: React.FC<GenreTabsProps> = ({
 }) => {
   return (
     <div>
+      <p>
+        ジャンル<span className="md:hidden">（横スクロール）▶︎</span>
+      </p>
       <div
         role="tablist"
         aria-label="ジャンルタブ"
