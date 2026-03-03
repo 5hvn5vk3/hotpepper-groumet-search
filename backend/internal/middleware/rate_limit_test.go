@@ -269,3 +269,58 @@ func TestRateLimit_ConcurrentRequestsAreBounded(t *testing.T) {
 		t.Fatalf("handled=%d, want=%d", okCount+tooManyCount, total)
 	}
 }
+
+func TestClientKeyFromRequest_XForwardedFor(t *testing.T) {
+	tests := []struct {
+		name       string
+		remoteAddr string
+		xff        string
+		wantKey    string
+	}{
+		{
+			name:       "XFF単一IP: プロキシが付与したIPを返す",
+			remoteAddr: "10.0.0.1:9999",
+			xff:        "203.0.113.10",
+			wantKey:    "203.0.113.10",
+		},
+		{
+			name:       "XFF複数IP: 末尾（プロキシ付与）のIPを返す",
+			remoteAddr: "10.0.0.1:9999",
+			xff:        "1.2.3.4, 5.6.7.8, 203.0.113.20",
+			wantKey:    "203.0.113.20",
+		},
+		{
+			name:       "XFF末尾が不正な場合: 手前の有効IPを返す",
+			remoteAddr: "10.0.0.1:9999",
+			xff:        "203.0.113.30, invalid",
+			wantKey:    "203.0.113.30",
+		},
+		{
+			name:       "XFFなし: RemoteAddrのホスト部を返す",
+			remoteAddr: "192.0.2.50:12345",
+			xff:        "",
+			wantKey:    "192.0.2.50",
+		},
+		{
+			name:       "XFF全エントリ不正: RemoteAddrのホスト部を返す",
+			remoteAddr: "192.0.2.60:12345",
+			xff:        "invalid, garbage",
+			wantKey:    "192.0.2.60",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+			req.RemoteAddr = tt.remoteAddr
+			if tt.xff != "" {
+				req.Header.Set("X-Forwarded-For", tt.xff)
+			}
+
+			got := clientKeyFromRequest(req)
+			if got != tt.wantKey {
+				t.Fatalf("clientKeyFromRequest = %q, want %q", got, tt.wantKey)
+			}
+		})
+	}
+}

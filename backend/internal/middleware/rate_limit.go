@@ -187,6 +187,18 @@ func clientKeyFromRequest(r *http.Request) string {
 		return "unknown"
 	}
 
+	// Render 等のリバースプロキシ環境では r.RemoteAddr がプロキシ内部 IP になる。
+	// X-Forwarded-For の末尾エントリがプロキシ層の付与した本物のクライアント IP のため優先して使用する。
+	// 先頭エントリはクライアントが偽装できるため使用しない。
+	if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
+		parts := strings.Split(xff, ",")
+		for i := len(parts) - 1; i >= 0; i-- {
+			if ip := strings.TrimSpace(parts[i]); net.ParseIP(ip) != nil {
+				return ip
+			}
+		}
+	}
+
 	remoteAddr := strings.TrimSpace(r.RemoteAddr)
 	if remoteAddr == "" {
 		return "unknown"
