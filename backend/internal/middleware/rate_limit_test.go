@@ -215,12 +215,9 @@ func TestLimiterStore_CleansUpStaleEntries(t *testing.T) {
 		t.Fatal("allow for second client should be true")
 	}
 
-	store.mu.Lock()
-	_, oldExists := store.clients["192.0.2.60"]
-	store.mu.Unlock()
-
-	if oldExists {
-		t.Fatal("stale client entry should be cleaned up")
+	// クリーンアップ後は 192.0.2.60 のエントリが削除され、残存クライアントは 1 件のみ
+	if got := store.ClientCount(); got != 1 {
+		t.Fatalf("client count after cleanup = %d, want 1", got)
 	}
 }
 

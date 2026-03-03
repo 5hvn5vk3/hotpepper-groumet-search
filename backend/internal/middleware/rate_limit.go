@@ -93,12 +93,6 @@ func NewLimiterStore(requests int, window time.Duration, opts ...LimiterStoreOpt
 	if store.burst < 1 {
 		store.burst = 1
 	}
-	if store.entryTTL <= 0 {
-		store.entryTTL = 10 * window
-	}
-	if store.cleanupInterval <= 0 {
-		store.cleanupInterval = window
-	}
 
 	// 1 トークン補充に要する最小秒数を Retry-After のデフォルト値として事前計算する
 	store.retryAfterSec = int(math.Ceil(1.0 / store.ratePerSecond))
@@ -109,6 +103,8 @@ func NewLimiterStore(requests int, window time.Duration, opts ...LimiterStoreOpt
 	return store
 }
 
+// RateLimit は GET リクエストに対して store のレートリミットを適用するミドルウェアを返す。
+// store が nil の場合はレートリミットを無効化する（テスト・開発環境での一時的な無効化に利用できる）。
 func RateLimit(store *LimiterStore, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -124,11 +120,12 @@ func RateLimit(store *LimiterStore, next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Retry-After", strconv.Itoa(store.retryAfterSec))
 		w.WriteHeader(http.StatusTooManyRequests)
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		body, _ := json.Marshal(map[string]any{
 			"error": map[string]string{
 				"message": rateLimitMessage,
 			},
 		})
+		_, _ = w.Write(body)
 	}
 }
 
@@ -180,6 +177,13 @@ func refillTokens(tokens float64, elapsed time.Duration, ratePerSecond, burst fl
 	}
 
 	return tokens
+}
+
+// ClientCount は現在追跡中のクライアント数を返す。主にテストで使用する。
+func (s *LimiterStore) ClientCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.clients)
 }
 
 func (s *LimiterStore) cleanupExpiredLocked(now time.Time) {

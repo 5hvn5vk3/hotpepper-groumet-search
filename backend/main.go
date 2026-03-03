@@ -4,10 +4,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
+	"backend/internal/config"
 	"backend/internal/handler"
 	"backend/internal/middleware"
 	"backend/internal/service"
@@ -34,8 +33,8 @@ func main() {
 
 	hotpepperService := service.NewHotpepperService(apiKey)
 
-	rateLimitRequests := parsePositiveIntEnv("RATE_LIMIT_REQUESTS", 60)
-	rateLimitWindowSeconds := parsePositiveIntEnv("RATE_LIMIT_WINDOW_SECONDS", 60)
+	rateLimitRequests := config.ParsePositiveIntEnv("RATE_LIMIT_REQUESTS", 60)
+	rateLimitWindowSeconds := config.ParsePositiveIntEnv("RATE_LIMIT_WINDOW_SECONDS", 60)
 	// エンドポイントごとに独立したストアを持つことで、あるエンドポイントへの
 	// 過剰アクセスが他のエンドポイントのレートリミットに影響しないようにする
 	newLimiterStore := func() *middleware.LimiterStore {
@@ -62,19 +61,4 @@ func main() {
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func parsePositiveIntEnv(name string, fallback int) int {
-	value := strings.TrimSpace(os.Getenv(name))
-	if value == "" {
-		return fallback
-	}
-
-	parsed, err := strconv.Atoi(value)
-	if err != nil || parsed <= 0 {
-		log.Printf("invalid %s=%q; using default %d", name, value, fallback)
-		return fallback
-	}
-
-	return parsed
 }
