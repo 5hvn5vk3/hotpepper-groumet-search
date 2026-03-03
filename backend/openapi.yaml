@@ -297,10 +297,10 @@ paths:
       tags: [Genre]
       summary: ジャンルマスタ取得
       description: |
-        HotPepper ジャンルマスターAPI（`/genre/v1/`）からジャンル一覧を取得します。
+        HotPepper ジャンルマスタAPI（`/genre/v1/`）からジャンル一覧を取得します。
       responses:
         "200":
-          description: ジャンルマスター一覧
+          description: ジャンルマスタ一覧
           content:
             application/json:
               schema:
