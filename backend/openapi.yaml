@@ -14,6 +14,9 @@ info:
     | `HOTPEPPER_API_KEY` | ✅ | なし | HotPepper Web Service の API キー |
     | `PORT` | | `8080` | サーバーがリッスンするポート番号 |
     | `ALLOWED_ORIGIN` | | `http://localhost:3000` | CORS で許可するオリジン |
+    | `RATE_LIMIT_REQUESTS` | | `60` | 各API（`/api/gourmet`・`/api/gourmet/detail`・`/api/genre`）ごとのウィンドウ内許可リクエスト数 |
+    | `RATE_LIMIT_WINDOW_SECONDS` | | `60` | レートリミットを計測するウィンドウ秒数 |
+    | `RATE_LIMIT_BURST` | | `RATE_LIMIT_REQUESTS` と同値 | バースト上限（トークンバケット容量）。未設定時は `RATE_LIMIT_REQUESTS` と同じ |
 
     ### `ALLOWED_ORIGIN` の設定例
 
@@ -44,6 +47,8 @@ paths:
       description: |
         HotPepper グルメサーチAPI（`/gourmet/v1/`）を利用して店舗を検索します。
         バックエンドは HotPepper 側へ常に `format=json` と `type=lite+credit_card` を送信します。
+        GETレスポンスには `X-RateLimit-Limit`・`X-RateLimit-Remaining`・`X-RateLimit-Reset` が付与されます。
+        レートリミット超過時は `429` と `Retry-After` が返ります。
       parameters:
         - name: address
           in: query
@@ -115,6 +120,13 @@ paths:
       responses:
         "200":
           description: 検索成功レスポンス
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -122,6 +134,13 @@ paths:
         "400":
           description: |
             バックエンドの入力検証エラー、または HotPepper 上流エラーコード `3000`。
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -199,6 +218,13 @@ paths:
         "500":
           description: |
             サーバー内部エラー、JSONシリアライズ失敗、または HotPepper 上流エラーコード `2000`。
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -208,6 +234,13 @@ paths:
                   message: サービスが一時的に利用できません
         "502":
           description: HotPepper 上流エラーコード `1000`
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -215,6 +248,8 @@ paths:
               example:
                 error:
                   message: サービスが一時的に利用できません
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
 
   /api/gourmet/detail:
     get:
@@ -223,6 +258,8 @@ paths:
       description: |
         HotPepper グルメサーチAPI（`/gourmet/v1/`）を使って店舗IDで1件取得し、
         詳細モーダルで使う補足フィールドのみを返します。
+        GETレスポンスには `X-RateLimit-Limit`・`X-RateLimit-Remaining`・`X-RateLimit-Reset` が付与されます。
+        レートリミット超過時は `429` と `Retry-After` が返ります。
       parameters:
         - name: id
           in: query
@@ -234,6 +271,13 @@ paths:
       responses:
         "200":
           description: 店舗の補足詳細フィールド
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -241,6 +285,13 @@ paths:
         "400":
           description: |
             `id` の欠落・不正、または HotPepper 上流エラーコード `3000`。
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -256,6 +307,13 @@ paths:
                       message: 検索条件が正しくありません
         "404":
           description: 店舗が見つからない
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -275,6 +333,13 @@ paths:
         "500":
           description: |
             サーバー内部エラー、JSONシリアライズ失敗、または HotPepper 上流エラーコード `2000`。
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -284,6 +349,13 @@ paths:
                   message: サービスが一時的に利用できません
         "502":
           description: HotPepper 上流エラーコード `1000`
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -291,6 +363,8 @@ paths:
               example:
                 error:
                   message: サービスが一時的に利用できません
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
 
   /api/genre:
     get:
@@ -298,15 +372,31 @@ paths:
       summary: ジャンルマスタ取得
       description: |
         HotPepper ジャンルマスタAPI（`/genre/v1/`）からジャンル一覧を取得します。
+        GETレスポンスには `X-RateLimit-Limit`・`X-RateLimit-Remaining`・`X-RateLimit-Reset` が付与されます。
+        レートリミット超過時は `429` と `Retry-After` が返ります。
       responses:
         "200":
           description: ジャンルマスタ一覧
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenreMasterResponse"
         "400":
           description: HotPepper 上流エラーコード `3000`
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -326,6 +416,13 @@ paths:
         "500":
           description: |
             サーバー内部エラー、JSONシリアライズ失敗、または HotPepper 上流エラーコード `2000`。
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -335,6 +432,13 @@ paths:
                   message: サービスが一時的に利用できません
         "502":
           description: HotPepper 上流エラーコード `1000`
+          headers:
+            X-RateLimit-Limit:
+              $ref: "#/components/headers/XRateLimitLimit"
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/XRateLimitRemaining"
+            X-RateLimit-Reset:
+              $ref: "#/components/headers/XRateLimitReset"
           content:
             application/json:
               schema:
@@ -342,8 +446,56 @@ paths:
               example:
                 error:
                   message: サービスが一時的に利用できません
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
 
 components:
+  headers:
+    XRateLimitLimit:
+      description: このクライアントのバースト上限（トークンバケット容量）。
+      schema:
+        type: integer
+        minimum: 1
+        example: 60
+    XRateLimitRemaining:
+      description: このレスポンス返却時点で残っているリクエスト可能回数。
+      schema:
+        type: integer
+        minimum: 0
+        example: 59
+    XRateLimitReset:
+      description: 次に最低1リクエスト通過可能になる推定時刻（Unix秒）。
+      schema:
+        type: integer
+        format: int64
+        example: 1710000060
+    RetryAfter:
+      description: レートリミット超過時に再試行まで待つべき秒数。
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+  responses:
+    RateLimitExceeded:
+      description: IP単位のレートリミットを超過
+      headers:
+        X-RateLimit-Limit:
+          $ref: "#/components/headers/XRateLimitLimit"
+        X-RateLimit-Remaining:
+          $ref: "#/components/headers/XRateLimitRemaining"
+        X-RateLimit-Reset:
+          $ref: "#/components/headers/XRateLimitReset"
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              message: リクエストが多すぎます。しばらく待ってから再試行してください。
+
   schemas:
     ErrorResponse:
       type: object
