@@ -19,6 +19,14 @@ type clientBucket struct {
 	lastSeen   time.Time
 }
 
+// rateLimitResult は allowWithInfo が返す判定結果と付随情報をまとめた型。
+type rateLimitResult struct {
+	allowed   bool
+	remaining int       // 消費後の残りトークン数（floor）
+	limit     int       // バースト上限
+	resetAt   time.Time // 次に 1 トークン分の余裕ができる推定時刻
+}
+
 type LimiterStore struct {
 	mu sync.Mutex
 
@@ -105,6 +113,7 @@ func NewLimiterStore(requests int, window time.Duration, opts ...LimiterStoreOpt
 
 // RateLimit は GET リクエストに対して store のレートリミットを適用するミドルウェアを返す。
 // store が nil の場合はレートリミットを無効化する（テスト・開発環境での一時的な無効化に利用できる）。
+// 通過・拒否いずれの場合も X-RateLimit-Limit / Remaining / Reset ヘッダを付与する。
 func RateLimit(store *LimiterStore, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -112,7 +121,17 @@ func RateLimit(store *LimiterStore, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if store == nil || store.Allow(clientKeyFromRequest(r)) {
+		if store == nil {
+			next(w, r)
+			return
+		}
+
+		result := store.allowWithInfo(clientKeyFromRequest(r))
+		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(result.limit))
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(result.remaining))
+		w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(result.resetAt.Unix(), 10))
+
+		if result.allowed {
 			next(w, r)
 			return
 		}
@@ -129,9 +148,15 @@ func RateLimit(store *LimiterStore, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// Allow は clientKey のリクエストを許可するかどうかを返す。
 func (s *LimiterStore) Allow(clientKey string) bool {
+	return s.allowWithInfo(clientKey).allowed
+}
+
+// allowWithInfo はレートリミット判定を行い、ヘッダ付与に必要な情報を返す。
+func (s *LimiterStore) allowWithInfo(clientKey string) rateLimitResult {
 	if s == nil {
-		return true
+		return rateLimitResult{allowed: true}
 	}
 
 	key := strings.TrimSpace(clientKey)
@@ -140,6 +165,7 @@ func (s *LimiterStore) Allow(clientKey string) bool {
 	}
 
 	now := s.now()
+	limit := int(s.burst)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -148,12 +174,18 @@ func (s *LimiterStore) Allow(clientKey string) bool {
 
 	entry, exists := s.clients[key]
 	if !exists {
+		tokens := s.burst - 1
 		s.clients[key] = &clientBucket{
-			tokens:     s.burst - 1,
+			tokens:     tokens,
 			lastRefill: now,
 			lastSeen:   now,
 		}
-		return true
+		return rateLimitResult{
+			allowed:   true,
+			remaining: int(tokens),
+			limit:     limit,
+			resetAt:   resetTime(now, tokens, s.ratePerSecond),
+		}
 	}
 
 	entry.tokens = refillTokens(entry.tokens, now.Sub(entry.lastRefill), s.ratePerSecond, s.burst)
@@ -161,11 +193,21 @@ func (s *LimiterStore) Allow(clientKey string) bool {
 	entry.lastSeen = now
 
 	if entry.tokens < 1 {
-		return false
+		return rateLimitResult{
+			allowed:   false,
+			remaining: 0,
+			limit:     limit,
+			resetAt:   resetTime(now, entry.tokens, s.ratePerSecond),
+		}
 	}
 
 	entry.tokens--
-	return true
+	return rateLimitResult{
+		allowed:   true,
+		remaining: int(entry.tokens),
+		limit:     limit,
+		resetAt:   resetTime(now, entry.tokens, s.ratePerSecond),
+	}
 }
 
 func refillTokens(tokens float64, elapsed time.Duration, ratePerSecond, burst float64) float64 {
@@ -177,6 +219,17 @@ func refillTokens(tokens float64, elapsed time.Duration, ratePerSecond, burst fl
 	}
 
 	return tokens
+}
+
+// resetTime は tokens 個のトークンがある状態で、次に 1 リクエストが通過できるようになる時刻を返す。
+// tokens >= 1 の場合は今すぐ通過できるため now をそのまま返す。
+func resetTime(now time.Time, tokens float64, ratePerSecond float64) time.Time {
+	if tokens >= 1 {
+		return now
+	}
+	// tokens < 1: あと (1 - tokens) トークン必要。補充に要する秒数を切り上げで計算する。
+	waitSec := int64(math.Ceil((1.0 - tokens) / ratePerSecond))
+	return now.Add(time.Duration(waitSec) * time.Second)
 }
 
 // ClientCount は現在追跡中のクライアント数を返す。主にテストで使用する。
@@ -219,6 +272,13 @@ func clientKeyFromRequest(r *http.Request) string {
 			if ip := strings.TrimSpace(parts[i]); net.ParseIP(ip) != nil {
 				return ip
 			}
+		}
+	}
+
+	// X-Real-IP は XFF を付与しない一部のプロキシ（Nginx 等）向けのフォールバック。
+	if xri := strings.TrimSpace(r.Header.Get("X-Real-IP")); xri != "" {
+		if net.ParseIP(xri) != nil {
+			return xri
 		}
 	}
 

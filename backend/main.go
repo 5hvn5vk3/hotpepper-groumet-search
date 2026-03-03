@@ -35,12 +35,15 @@ func main() {
 
 	rateLimitRequests := config.ParsePositiveIntEnv("RATE_LIMIT_REQUESTS", 60)
 	rateLimitWindowSeconds := config.ParsePositiveIntEnv("RATE_LIMIT_WINDOW_SECONDS", 60)
+	// RATE_LIMIT_BURST 未設定時は RATE_LIMIT_REQUESTS と同値（バースト=通常レートで現状と同じ挙動）
+	rateLimitBurst := config.ParsePositiveIntEnv("RATE_LIMIT_BURST", rateLimitRequests)
 	// エンドポイントごとに独立したストアを持つことで、あるエンドポイントへの
 	// 過剰アクセスが他のエンドポイントのレートリミットに影響しないようにする
 	newLimiterStore := func() *middleware.LimiterStore {
 		return middleware.NewLimiterStore(
 			rateLimitRequests,
 			time.Duration(rateLimitWindowSeconds)*time.Second,
+			middleware.WithBurst(rateLimitBurst),
 		)
 	}
 
