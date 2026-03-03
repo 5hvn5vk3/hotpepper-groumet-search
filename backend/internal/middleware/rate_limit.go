@@ -5,6 +5,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ type LimiterStore struct {
 	now             func() time.Time
 	ratePerSecond   float64
 	burst           float64
+	retryAfterSec   int
 	entryTTL        time.Duration
 	cleanupInterval time.Duration
 	lastCleanup     time.Time
@@ -48,6 +50,16 @@ func WithCleanup(entryTTL, cleanupInterval time.Duration) LimiterStoreOption {
 		}
 		if cleanupInterval > 0 {
 			s.cleanupInterval = cleanupInterval
+		}
+	}
+}
+
+// WithBurst はバースト上限（トークンバケットの最大容量）を設定する。
+// 未指定時は requests と同じ値が使われる。
+func WithBurst(burst int) LimiterStoreOption {
+	return func(s *LimiterStore) {
+		if burst > 0 {
+			s.burst = float64(burst)
 		}
 	}
 }
@@ -88,6 +100,12 @@ func NewLimiterStore(requests int, window time.Duration, opts ...LimiterStoreOpt
 		store.cleanupInterval = window
 	}
 
+	// 1 トークン補充に要する最小秒数を Retry-After のデフォルト値として事前計算する
+	store.retryAfterSec = int(math.Ceil(1.0 / store.ratePerSecond))
+	if store.retryAfterSec < 1 {
+		store.retryAfterSec = 1
+	}
+
 	return store
 }
 
@@ -104,6 +122,7 @@ func RateLimit(store *LimiterStore, next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Retry-After", strconv.Itoa(store.retryAfterSec))
 		w.WriteHeader(http.StatusTooManyRequests)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": map[string]string{

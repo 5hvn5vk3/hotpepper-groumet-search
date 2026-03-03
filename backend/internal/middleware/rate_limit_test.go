@@ -270,6 +270,70 @@ func TestRateLimit_ConcurrentRequestsAreBounded(t *testing.T) {
 	}
 }
 
+func TestWithBurst_LimitsToBurstNotRequests(t *testing.T) {
+	clock := newFixedClock(time.Unix(0, 0))
+	// requests=10 だがバーストを 2 に絞る
+	store := NewLimiterStore(10, time.Hour, WithNowFunc(clock.Now), WithBurst(2))
+
+	handler := RateLimit(store, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	makeReq := func() int {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+		req.RemoteAddr = "203.0.113.100:1234"
+		handler(rec, req)
+		return rec.Code
+	}
+
+	if got := makeReq(); got != http.StatusOK {
+		t.Fatalf("1st status = %d, want %d", got, http.StatusOK)
+	}
+	if got := makeReq(); got != http.StatusOK {
+		t.Fatalf("2nd status = %d, want %d", got, http.StatusOK)
+	}
+	if got := makeReq(); got != http.StatusTooManyRequests {
+		t.Fatalf("3rd status = %d, want %d (burst=2 should block)", got, http.StatusTooManyRequests)
+	}
+}
+
+func TestRateLimit_Returns429WithRetryAfterHeader(t *testing.T) {
+	clock := newFixedClock(time.Unix(0, 0))
+	// 10 req / 60 sec → 1 トークン補充に 6 秒 → Retry-After: 6
+	store := NewLimiterStore(10, 60*time.Second, WithNowFunc(clock.Now))
+
+	handler := RateLimit(store, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	makeReq := func() *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+		req.RemoteAddr = "203.0.113.110:9999"
+		handler(rec, req)
+		return rec
+	}
+
+	// 1 回目: 通過
+	makeReq()
+
+	// 2 回目以降: ブロック
+	for i := 0; i < 10; i++ {
+		makeReq()
+	}
+
+	rec := makeReq()
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusTooManyRequests)
+	}
+
+	got := rec.Header().Get("Retry-After")
+	if got != "6" {
+		t.Fatalf("Retry-After = %q, want %q", got, "6")
+	}
+}
+
 func TestClientKeyFromRequest_XForwardedFor(t *testing.T) {
 	tests := []struct {
 		name       string

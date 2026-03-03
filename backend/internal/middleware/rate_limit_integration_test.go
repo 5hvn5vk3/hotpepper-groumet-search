@@ -39,6 +39,10 @@ func TestRateLimitIntegration_CorsHeaderRemainsOn429(t *testing.T) {
 		t.Fatalf("Access-Control-Allow-Origin = %q, want %q", got, allowedOrigin)
 	}
 
+	if got := secondRec.Header().Get("Retry-After"); got == "" {
+		t.Fatal("Retry-After header should be present on 429")
+	}
+
 	var body map[string]map[string]string
 	if err := json.NewDecoder(secondRec.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
