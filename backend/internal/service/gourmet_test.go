@@ -1,3 +1,6 @@
+// gourmet_test.go は gourmet.go に対応するテストファイルです。
+// 現時点では SearchGourmet のテストのみ含みます。
+// GetGourmetDetail のテストは未追加です。
 package service
 
 import (
