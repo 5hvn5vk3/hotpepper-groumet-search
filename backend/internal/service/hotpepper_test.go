@@ -211,9 +211,9 @@ func TestSearchGourmet_HotpepperAPIError(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	var apiErr *types.HotpepperAPIError
+	var apiErr *HotpepperAPIError
 	if !errors.As(err, &apiErr) {
-		t.Fatalf("expected *types.HotpepperAPIError, got: %T (%v)", err, err)
+		t.Fatalf("expected *HotpepperAPIError, got: %T (%v)", err, err)
 	}
 	if apiErr.Code != 3000 {
 		t.Fatalf("expected code=3000, got: %d", apiErr.Code)

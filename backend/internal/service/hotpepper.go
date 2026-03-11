@@ -31,7 +31,7 @@ func NewHotpepperService(apiKey string) *HotpepperService {
 	}
 }
 
-func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*types.GourmetSearchResponse, error) {
+func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*types.GourmetSearchResult, error) {
 
 	queryParams := url.Values{}
 
@@ -70,19 +70,25 @@ func (s *HotpepperService) SearchGourmet(params types.GourmetSearchParams) (*typ
 		return nil, err
 	}
 
-	var response types.GourmetSearchResponse
-	if err := json.Unmarshal(body, &response); err != nil {
+	var raw gourmetSearchResponse
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if len(response.Results.Error) > 0 {
-		return nil, convertAPIError(&response.Results.Error[0])
+	if len(raw.Results.Error) > 0 {
+		return nil, convertAPIError(&raw.Results.Error[0])
 	}
 
-	return &response, nil
+	return &types.GourmetSearchResult{
+		Results: types.GourmetSearchResultData{
+			ResultsAvailable: raw.Results.ResultsAvailable,
+			ResultsStart:     raw.Results.ResultsStart,
+			Shop:             raw.Results.Shop,
+		},
+	}, nil
 }
 
-func (s *HotpepperService) GetGourmetDetail(id string) (*types.GourmetSearchResponse, error) {
+func (s *HotpepperService) GetGourmetDetail(id string) (*types.GourmetSearchResult, error) {
 	shopID := strings.TrimSpace(id)
 	if shopID == "" {
 		return nil, fmt.Errorf("id is required")
@@ -100,19 +106,25 @@ func (s *HotpepperService) GetGourmetDetail(id string) (*types.GourmetSearchResp
 		return nil, err
 	}
 
-	var response types.GourmetSearchResponse
-	if err := json.Unmarshal(body, &response); err != nil {
+	var raw gourmetSearchResponse
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if len(response.Results.Error) > 0 {
-		return nil, convertAPIError(&response.Results.Error[0])
+	if len(raw.Results.Error) > 0 {
+		return nil, convertAPIError(&raw.Results.Error[0])
 	}
 
-	return &response, nil
+	return &types.GourmetSearchResult{
+		Results: types.GourmetSearchResultData{
+			ResultsAvailable: raw.Results.ResultsAvailable,
+			ResultsStart:     raw.Results.ResultsStart,
+			Shop:             raw.Results.Shop,
+		},
+	}, nil
 }
 
-func (s *HotpepperService) GetGenreMaster() (*types.GenreMasterResponse, error) {
+func (s *HotpepperService) GetGenreMaster() (*types.GenreMasterResult, error) {
 
 	queryParams := url.Values{}
 	queryParams.Set("key", s.apiKey)
@@ -125,16 +137,20 @@ func (s *HotpepperService) GetGenreMaster() (*types.GenreMasterResponse, error) 
 		return nil, err
 	}
 
-	var response types.GenreMasterResponse
-	if err := json.Unmarshal(body, &response); err != nil {
+	var raw genreMasterResponse
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if len(response.Results.Error) > 0 {
-		return nil, convertAPIError(&response.Results.Error[0])
+	if len(raw.Results.Error) > 0 {
+		return nil, convertAPIError(&raw.Results.Error[0])
 	}
 
-	return &response, nil
+	return &types.GenreMasterResult{
+		Results: types.GenreMasterResultData{
+			Genre: raw.Results.Genre,
+		},
+	}, nil
 }
 
 func (s *HotpepperService) fetchAPI(apiURL string) ([]byte, error) {
@@ -164,9 +180,39 @@ func (s *HotpepperService) fetchAPI(apiURL string) ([]byte, error) {
 
 // convertAPIError はホットペッパーAPIのエラーをHotpepperAPIErrorに変換する。
 // 生のエラーメッセージは情報漏洩防止のためログのみに出力し、外部には返さない。
-func convertAPIError(apiErr *types.APIError) error {
+func convertAPIError(apiErr *hotPepperResponseError) error {
 	log.Printf("hotpepper API error: code=%d, message=%s", apiErr.Code, apiErr.Message)
-	return &types.HotpepperAPIError{Code: apiErr.Code}
+	return &HotpepperAPIError{Code: apiErr.Code}
+}
+
+// --- HotPepper API レスポンスの JSON デコード専用プライベート型 ---
+// これらは service 層の実装詳細であり、外部パッケージに公開しない。
+
+type gourmetSearchResponse struct {
+	Results gourmetSearchResults `json:"results"`
+}
+
+type gourmetSearchResults struct {
+	ResultsAvailable int                      `json:"results_available"`
+	ResultsStart     int                      `json:"results_start"`
+	Shop             []types.Shop             `json:"shop"`
+	Error            []hotPepperResponseError `json:"error"`
+}
+
+// hotPepperResponseError は HotPepper API レスポンスの "error" フィールドをデコードするための構造体。
+// Go の error インターフェースを実装した HotpepperAPIError とは役割が異なる。
+type hotPepperResponseError struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+}
+
+type genreMasterResponse struct {
+	Results genreMasterResults `json:"results"`
+}
+
+type genreMasterResults struct {
+	Genre []types.HotpepperGenre   `json:"genre"`
+	Error []hotPepperResponseError `json:"error"`
 }
 
 func clampInt(value, min, max int) int {

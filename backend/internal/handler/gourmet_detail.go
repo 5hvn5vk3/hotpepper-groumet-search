@@ -9,6 +9,22 @@ import (
 	"backend/internal/types"
 )
 
+// gourmetDetailResponse は詳細モーダルで追加表示する補助情報DTO。
+// gourmet_detail エンドポイント専用の型であるため handler パッケージに定義する。
+// credit_card は一覧由来で保持する方針のため、このDTOには含めない。
+type gourmetDetailResponse struct {
+	Open           string `json:"open,omitempty"`
+	Close          string `json:"close,omitempty"`
+	BudgetMemo     string `json:"budget_memo,omitempty"`
+	Wifi           string `json:"wifi,omitempty"`
+	PrivateRoom    string `json:"private_room,omitempty"`
+	NonSmoking     string `json:"non_smoking,omitempty"`
+	Parking        string `json:"parking,omitempty"`
+	Lunch          string `json:"lunch,omitempty"`
+	Midnight       string `json:"midnight,omitempty"`
+	ShopDetailMemo string `json:"shop_detail_memo,omitempty"`
+}
+
 type GourmetDetailHandler struct {
 	service *service.HotpepperService
 }
@@ -40,7 +56,7 @@ func (h *GourmetDetailHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	detail := toShopDetailSupplement(response.Results.Shop[0])
+	detail := toGourmetDetailResponse(response.Results.Shop[0])
 	body, err := json.Marshal(detail)
 	if err != nil {
 		writeErrorJSON(w, http.StatusInternalServerError, "サービスが一時的に利用できません")
@@ -52,8 +68,8 @@ func (h *GourmetDetailHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func toShopDetailSupplement(shop types.Shop) types.ShopDetailSupplement {
-	return types.ShopDetailSupplement{
+func toGourmetDetailResponse(shop types.Shop) gourmetDetailResponse {
+	return gourmetDetailResponse{
 		Open:           strings.TrimSpace(shop.Open),
 		Close:          strings.TrimSpace(shop.Close),
 		BudgetMemo:     strings.TrimSpace(shop.BudgetMemo),

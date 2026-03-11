@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"backend/internal/types"
+	"backend/internal/service"
 )
 
 var apiKeyQueryPattern = regexp.MustCompile(`([?&]key=)[^&\s]+`)
@@ -16,7 +16,7 @@ var apiKeyQueryPattern = regexp.MustCompile(`([?&]key=)[^&\s]+`)
 // ユーザー向けメッセージ（自前定義）をJSONで返す。
 // ホットペッパーAPIの生のエラーメッセージはログのみに出力し、フロントには返さない。
 func handleServiceError(w http.ResponseWriter, err error) {
-	var apiErr *types.HotpepperAPIError
+	var apiErr *service.HotpepperAPIError
 	if errors.As(err, &apiErr) {
 		log.Printf("hotpepper API error handled: code=%d", apiErr.Code)
 		switch apiErr.Code {
