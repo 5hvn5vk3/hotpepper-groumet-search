@@ -170,10 +170,11 @@ hotpepper-groumet-search/
 │   ├── main.go               # エントリーポイント
 │   ├── openapi.yaml          # API仕様（OpenAPI 3.0.3）
 │   └── internal/
+│       ├── config/           # 環境変数の解釈・既定値適用
 │       ├── handler/          # HTTPハンドラー（リクエスト受付・バリデーション）
-│       ├── middleware/       # CORSミドルウェア
+│       ├── middleware/       # CORS・レートリミット
 │       ├── service/          # HotPepper API 呼び出しロジック
-│       └── types/            # リクエスト・レスポンス型定義
+│       └── types/            # リクエスト・レスポンス公開型
 └── frontend/
     └── src/
         ├── api/              # バックエンドAPIクライアント
@@ -243,7 +244,7 @@ http://localhost:3000 を開く
 
 - FE型を用途別に分離（`ShopListItem` / `ShopDetailSupplement`）。
 - `GET /api/gourmet/detail` を追加し、詳細補足情報の取得をBEへ移管。
-- 詳細APIは `toShopDetailSupplement()` で必要な10項目のみ返却。
+- 詳細APIは `toGourmetDetailResponse()` で必要な10項目のみ返却。
 
 ### 効果
 
@@ -345,6 +346,11 @@ APIキーや外部APIの生メッセージを露出すると、セキュリテ�
 ### 補足
 
 BEテストは現在、検索APIを中心に整備しています。`GetGourmetDetail` / `GetGenreMaster` の専用テストは未実装ですが、共通で使う `handleServiceError` は `errors_test.go` で検証済みのため、共通エラー処理（HTTP変換・ログマスク）は間接的に担保できています。
+
+## 11-7. BE型命名の整理（リファクタリング）
+
+型名と配置を整理し、`types` では `HotpepperGenre` / `ShopPhotos` / `GourmetSearchResult` / `GenreMasterResult` を公開型として利用しています。  
+また、HotPepper固有エラーは `service.HotpepperAPIError` として `service` パッケージに配置し、JSONデコード専用型は `service` 内の非公開型に集約しています。
 
 # 12. デザイン面でこだわったポイント
 
