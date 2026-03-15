@@ -9,10 +9,10 @@ import (
 	"backend/internal/types"
 )
 
-// gourmetDetailResponse は詳細モーダルで追加表示する補助情報DTO。
+// gourmetDetailSupplementResponse は詳細モーダルで追加表示する補助情報DTO。
 // gourmet_detail エンドポイント専用の型であるため handler パッケージに定義する。
 // credit_card は一覧由来で保持する方針のため、このDTOには含めない。
-type gourmetDetailResponse struct {
+type gourmetDetailSupplementResponse struct {
 	Open           string `json:"open,omitempty"`
 	Close          string `json:"close,omitempty"`
 	BudgetMemo     string `json:"budget_memo,omitempty"`
@@ -56,7 +56,7 @@ func (h *GourmetDetailHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	detail := toGourmetDetailResponse(response.Results.Shop[0])
+	detail := togourmetDetailSupplementResponse(response.Results.Shop[0])
 	body, err := json.Marshal(detail)
 	if err != nil {
 		writeErrorJSON(w, http.StatusInternalServerError, "サービスが一時的に利用できません")
@@ -68,8 +68,8 @@ func (h *GourmetDetailHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
-func toGourmetDetailResponse(shop types.Shop) gourmetDetailResponse {
-	return gourmetDetailResponse{
+func togourmetDetailSupplementResponse(shop types.Shop) gourmetDetailSupplementResponse {
+	return gourmetDetailSupplementResponse{
 		Open:           strings.TrimSpace(shop.Open),
 		Close:          strings.TrimSpace(shop.Close),
 		BudgetMemo:     strings.TrimSpace(shop.BudgetMemo),

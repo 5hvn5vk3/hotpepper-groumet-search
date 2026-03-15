@@ -244,7 +244,7 @@ http://localhost:3000 を開く
 
 - FE型を用途別に分離（`ShopListItem` / `ShopDetailSupplement`）。
 - `GET /api/gourmet/detail` を追加し、詳細補足情報の取得をBEへ移管。
-- 詳細APIは `toGourmetDetailResponse()` で必要な10項目のみ返却。
+- 詳細APIは `togourmetDetailSupplementResponse()` で必要な10項目のみ返却。
 
 ### 効果
 
