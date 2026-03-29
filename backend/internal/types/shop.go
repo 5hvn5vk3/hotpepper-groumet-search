@@ -1,26 +1,15 @@
 package types
 
-type GourmetSearchResponse struct {
-	Results GourmetSearchResults `json:"results"`
+// GourmetSearchResult は service 層が handler に返すグルメ検索結果の公開型。
+// JSON シリアライズもこの型が担い、フロントエンドへのレスポンス形式を定義する。
+type GourmetSearchResult struct {
+	Results GourmetSearchResultData `json:"results"`
 }
 
-type GourmetSearchResults struct {
-	APIVersion string `json:"api_version"`
-
-	ResultsAvailable int `json:"results_available"`
-
-	ResultsReturned string `json:"results_returned"`
-
-	ResultsStart int `json:"results_start"`
-
-	Shop []Shop `json:"shop"`
-
-	Error []APIError `json:"error"`
-}
-
-type APIError struct {
-	Message string `json:"message"`
-	Code    int    `json:"code"`
+type GourmetSearchResultData struct {
+	ResultsAvailable int    `json:"results_available"`
+	ResultsStart     int    `json:"results_start"`
+	Shop             []Shop `json:"shop"`
 }
 
 type Shop struct {
@@ -62,7 +51,7 @@ type Shop struct {
 
 	URLs ShopURLs `json:"urls"`
 
-	Photo ShopPhoto `json:"photo"`
+	Photo ShopPhotos `json:"photo"`
 
 	CreditCard []ShopCreditCard `json:"credit_card"`
 }
@@ -77,7 +66,8 @@ type ShopURLs struct {
 	PC string `json:"pc"`
 }
 
-type ShopPhoto struct {
+// ShopPhotos は店舗写真URLを束ねる型。
+type ShopPhotos struct {
 	PC ShopPhotoPC `json:"pc"`
 }
 
@@ -90,30 +80,6 @@ type ShopPhotoPC struct {
 }
 
 type ShopCreditCard struct {
-	Code string `json:"code"`
-
-	Name string `json:"name"`
-}
-
-type GenreMasterResponse struct {
-	Results GenreMasterResults `json:"results"`
-}
-
-type GenreMasterResults struct {
-	APIVersion string `json:"api_version"`
-
-	ResultsAvailable int `json:"results_available"`
-
-	ResultsReturned string `json:"results_returned"`
-
-	ResultsStart int `json:"results_start"`
-
-	Genre []Genre `json:"genre"`
-
-	Error []APIError `json:"error"`
-}
-
-type Genre struct {
 	Code string `json:"code"`
 
 	Name string `json:"name"`

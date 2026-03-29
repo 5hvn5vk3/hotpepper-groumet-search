@@ -11,11 +11,11 @@ import (
 	"backend/internal/types"
 )
 
-type ValidationError struct {
+type validationError struct {
 	Message string
 }
 
-func (e *ValidationError) Error() string {
+func (e *validationError) Error() string {
 
 	return e.Message
 }
@@ -82,7 +82,7 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 		return types.GourmetSearchParams{}, parseErr
 	}
 	if rng != 0 && (rng < 1 || rng > 5) {
-		return types.GourmetSearchParams{}, &ValidationError{Message: "range must be 1, 2, 3, 4, or 5"}
+		return types.GourmetSearchParams{}, &validationError{Message: "range must be 1, 2, 3, 4, or 5"}
 	}
 
 	start, parseErr := parseOptionalIntStrict("start", query.Get("start"), 1)
@@ -97,13 +97,13 @@ func (h *GourmetHandler) parseParams(r *http.Request) (types.GourmetSearchParams
 
 	hasLocation := lat != 0 && lng != 0
 	if rng != 0 && !hasLocation {
-		return types.GourmetSearchParams{}, &ValidationError{Message: "range requires lat and lng"}
+		return types.GourmetSearchParams{}, &validationError{Message: "range requires lat and lng"}
 	}
 
 	hasAddress := address != ""
 	hasKeyword := keyword != ""
 	if !hasLocation && !hasAddress && !hasKeyword {
-		return types.GourmetSearchParams{}, &ValidationError{Message: "either lat/lng, address, or keyword must be provided"}
+		return types.GourmetSearchParams{}, &validationError{Message: "either lat/lng, address, or keyword must be provided"}
 	}
 
 	return types.GourmetSearchParams{
@@ -126,7 +126,7 @@ func parseOptionalIntStrict(name, value string, fallback int) (int, error) {
 
 	parsed, err := strconv.Atoi(trimmed)
 	if err != nil {
-		return 0, &ValidationError{Message: name + " must be an integer"}
+		return 0, &validationError{Message: name + " must be an integer"}
 	}
 
 	return parsed, nil
@@ -140,7 +140,7 @@ func parseLatLngStrict(latStr, lngStr string) (float64, float64, error) {
 	hasLng := lngTrimmed != ""
 
 	if hasLat != hasLng {
-		return 0, 0, &ValidationError{Message: "lat and lng must be provided together"}
+		return 0, 0, &validationError{Message: "lat and lng must be provided together"}
 	}
 
 	if !hasLat {
@@ -149,18 +149,18 @@ func parseLatLngStrict(latStr, lngStr string) (float64, float64, error) {
 
 	lat, err := strconv.ParseFloat(latTrimmed, 64)
 	if err != nil {
-		return 0, 0, &ValidationError{Message: "lat must be a number"}
+		return 0, 0, &validationError{Message: "lat must be a number"}
 	}
 	if math.IsNaN(lat) || math.IsInf(lat, 0) {
-		return 0, 0, &ValidationError{Message: "lat must be a finite number"}
+		return 0, 0, &validationError{Message: "lat must be a finite number"}
 	}
 
 	lng, err := strconv.ParseFloat(lngTrimmed, 64)
 	if err != nil {
-		return 0, 0, &ValidationError{Message: "lng must be a number"}
+		return 0, 0, &validationError{Message: "lng must be a number"}
 	}
 	if math.IsNaN(lng) || math.IsInf(lng, 0) {
-		return 0, 0, &ValidationError{Message: "lng must be a finite number"}
+		return 0, 0, &validationError{Message: "lng must be a finite number"}
 	}
 
 	return lat, lng, nil

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"backend/internal/types"
+	"backend/internal/service"
 )
 
 func TestMaskAPIKeyInLog(t *testing.T) {
@@ -129,7 +129,7 @@ func TestHandleServiceError_HotpepperCodeMapping(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			handleServiceError(rec, &types.HotpepperAPIError{Code: tc.code})
+			handleServiceError(rec, &service.HotpepperAPIError{Code: tc.code})
 
 			if rec.Code != tc.wantStatus {
 				t.Fatalf("status = %d, want %d", rec.Code, tc.wantStatus)
